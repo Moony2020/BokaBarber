@@ -23,19 +23,6 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
-
-        <style jsx global>{`
-          .app-layout {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-          }
-          .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-          }
-        `}</style>
       </body>
     </html>
   );

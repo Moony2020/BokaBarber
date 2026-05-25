@@ -73,7 +73,8 @@ const seedDatabase = async () => {
         slug: 'royal-cuts',
         address: {
           street: 'Kungsgatan 12', city: 'Stockholm',
-          zipCode: '111 35', country: 'Sweden'
+          zipCode: '111 35', country: 'Sweden',
+          coordinates: { type: 'Point', coordinates: [18.0686, 59.3326] }
         },
         rating: 4.9, reviewCount: 142
       }).save();
@@ -157,7 +158,7 @@ const seedDatabase = async () => {
     if (!existingShop2) {
       const shop2 = await new Shop({
         name: 'Barber & Co', slug: 'barber-co',
-        address: { street: 'Avenyn 18', city: 'Göteborg', zipCode: '411 36', country: 'Sweden' },
+        address: { street: 'Avenyn 18', city: 'Göteborg', zipCode: '411 36', country: 'Sweden', coordinates: { type: 'Point', coordinates: [11.9746, 57.7089] } },
         rating: 4.8, reviewCount: 96
       }).save();
 
