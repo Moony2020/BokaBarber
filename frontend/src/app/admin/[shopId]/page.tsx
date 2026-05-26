@@ -81,6 +81,41 @@ export default function ShopAdminDashboard() {
   const [closeTime, setCloseTime] = useState('18:00');
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Shop details
+  const [shopName, setShopName] = useState('');
+  const [shopSlug, setShopSlug] = useState('');
+  const [subscription, setSubscription] = useState<{ status: string; trialEndsAt: string; gracePeriodEndsAt?: string } | null>(null);
+
+  // Barber form
+  const [newBarberFirstName, setNewBarberFirstName] = useState('');
+  const [newBarberLastName, setNewBarberLastName] = useState('');
+  const [newBarberEmail, setNewBarberEmail] = useState('');
+  const [newBarberPassword, setNewBarberPassword] = useState('');
+  const [newBarberBio, setNewBarberBio] = useState('');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [savingBarber, setSavingBarber] = useState(false);
+
+  // Fetch shop details on load
+  useEffect(() => {
+    const fetchShopInfo = async () => {
+      try {
+        const res = await api.adminGetSettings(shopId);
+        if (res.ok) {
+          const d = res.data as { shop?: { name: string; slug: string } };
+          if (d.shop) {
+            setShopName(d.shop.name);
+            setShopSlug(d.shop.slug);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load shop info', err);
+      }
+    };
+    if (shopId) {
+      fetchShopInfo();
+    }
+  }, [shopId]);
+
   // Auth check
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -94,7 +129,11 @@ export default function ShopAdminDashboard() {
     setLoading(true); setError('');
     try {
       const res = await api.adminDashboard(shopId);
-      if (res.ok) setStats(res.data as DashboardStats);
+      if (res.ok) {
+        const d = res.data as { todayBookings: number; monthRevenue: number; totalCustomers: number; activeBarbers: number; subscription: any };
+        setStats(d);
+        setSubscription(d.subscription);
+      }
       const bk = await api.adminBookings(shopId);
       if (bk.ok) setBookings((bk.data as { bookings: BookingItem[] }).bookings || []);
     } catch { setError('Kunde inte hämta data från servern.'); }
@@ -148,7 +187,7 @@ export default function ShopAdminDashboard() {
   useEffect(() => {
     if (activeTab === 'oversikt' || activeTab === 'kalender') loadDashboard();
     else if (activeTab === 'tjanster') loadServices();
-    else if (activeTab === 'personal') loadBarbers();
+    else if (activeTab === 'personal') { loadBarbers(); loadServices(); }
     else if (activeTab === 'kunder') loadCustomers();
     else if (activeTab === 'installningar') loadSettings();
   }, [activeTab, loadDashboard, loadServices, loadBarbers, loadCustomers, loadSettings]);
@@ -184,6 +223,38 @@ export default function ShopAdminDashboard() {
     alert('Inställningar sparade!');
   };
 
+  const handleAddBarber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBarber(true);
+    setError('');
+    try {
+      const res = await api.adminAddBarber(shopId, {
+        firstName: newBarberFirstName,
+        lastName: newBarberLastName,
+        email: newBarberEmail,
+        password: newBarberPassword,
+        bio: newBarberBio,
+        serviceIds: selectedServices
+      });
+      if (res.ok) {
+        setNewBarberFirstName('');
+        setNewBarberLastName('');
+        setNewBarberEmail('');
+        setNewBarberPassword('');
+        setNewBarberBio('');
+        setSelectedServices([]);
+        loadBarbers();
+      } else {
+        const d = res.data as { error?: string };
+        setError(d.error || 'Kunde inte lägga till personal.');
+      }
+    } catch {
+      setError('Ett nätverksfel uppstod.');
+    } finally {
+      setSavingBarber(false);
+    }
+  };
+
   const formatTime = (iso: string) => {
     const d = new Date(iso);
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -201,7 +272,9 @@ export default function ShopAdminDashboard() {
   return (
     <div className="admin-dashboard-wrapper animate-fade-in">
       <div className="admin-sidebar">
-        <div className="sidebar-brand">💈 Boka<span>Barber</span> Admin</div>
+        <div className="sidebar-brand">
+          💈 <span>{shopName || 'BokaBarber'}</span>
+        </div>
         <nav className="sidebar-nav">
           {[
             { key: 'oversikt', icon: '📊', label: 'Översikt' },
@@ -221,12 +294,63 @@ export default function ShopAdminDashboard() {
       <div className="admin-main-panel">
         <header className="admin-top-bar">
           <h2>{activeTab === 'oversikt' ? 'Översikt' : activeTab === 'kalender' ? 'Alla Bokningar' : activeTab === 'tjanster' ? 'Tjänster' : activeTab === 'personal' ? 'Personal' : activeTab === 'kunder' ? 'Kundregister' : 'Inställningar'}</h2>
-          <div className="admin-shop-badge">🔗 Salong-ID: {shopId.substring(0, 8)}...</div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {shopSlug && (
+              <a
+                href={`/${shopSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{ padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--primary)', color: 'white', fontWeight: 600, textDecoration: 'none' }}
+              >
+                🌐 Visa bokningssida
+              </a>
+            )}
+            <div className="admin-shop-badge">🔗 Salong-ID: {shopId.substring(0, 8)}...</div>
+          </div>
         </header>
 
         <div className="admin-content-area">
           {error && <div className="error-alert">⚠️ {error}</div>}
           {loading && <div className="loading-indicator">⏳ Laddar data från databasen...</div>}
+
+          {/* Subscription Status Banners */}
+          {!loading && subscription && (
+            <div className="subscription-status-banner">
+              {subscription.status === 'trial' && (() => {
+                const diff = new Date(subscription.trialEndsAt).getTime() - Date.now();
+                const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+                if (days > 0) {
+                  return (
+                    <div className="alert-banner info-alert">
+                      ℹ️ Du har <strong>{days}</strong> {days === 1 ? 'dag' : 'dagar'} kvar av din gratis provperiod.
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="alert-banner danger-alert">
+                      ⚠️ Din provperiod har gått ut. Välj en plan för att aktivera bokningar.
+                    </div>
+                  );
+                }
+              })()}
+              {subscription.status === 'suspended' && (
+                <div className="alert-banner danger-alert">
+                  ⚠️ Din salong är pausad. Uppdatera betalningen för att aktivera bokningar igen.
+                </div>
+              )}
+              {subscription.status === 'cancelled' && (
+                <div className="alert-banner danger-alert">
+                  ⚠️ Salongens abonnemang är uppsagt. Välj en plan för att starta om.
+                </div>
+              )}
+              {subscription.status === 'past_due' && (
+                <div className="alert-banner warning-alert">
+                  ⚠️ Betalningen misslyckades. Uppdatera betalningsmetod inom 7 dagar.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* OVERVIEW */}
           {activeTab === 'oversikt' && !loading && (
@@ -342,30 +466,73 @@ export default function ShopAdminDashboard() {
 
           {/* STAFF */}
           {activeTab === 'personal' && !loading && (
-            <div className="tab-pane card-premium">
-              <h3>Frisörer & Personal ({barbers.length})</h3>
-              {barbers.length === 0 ? (
-                <div className="empty-state" style={{ marginTop: '16px' }}>Inga frisörer registrerade ännu.</div>
-              ) : (
-                <div className="grid-responsive" style={{ marginTop: '24px' }}>
-                  {barbers.map(b => (
-                    <div key={b._id} className="card-premium" style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '12px' }}>✂️</div>
-                      <h4>{b.name}</h4>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>{b.email}</p>
-                      {b.bio && <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{b.bio}</p>}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-                        {b.services.map(s => (
-                          <span key={s} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600 }}>{s}</span>
-                        ))}
-                      </div>
-                      <span className={`status-badge ${b.isActive ? 'confirmed' : 'cancelled_by_shop'}`} style={{ marginTop: '12px', display: 'inline-block' }}>
-                        {b.isActive ? 'Aktiv' : 'Inaktiv'}
-                      </span>
+            <div className="tab-pane">
+              <div className="two-col-layout">
+                <div className="card-premium">
+                  <h3>Frisörer & Personal ({barbers.length})</h3>
+                  {barbers.length === 0 ? (
+                    <div className="empty-state" style={{ marginTop: '16px' }}>Inga frisörer registrerade ännu. Lägg till din första frisör till höger →</div>
+                  ) : (
+                    <div className="grid-responsive" style={{ marginTop: '24px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                      {barbers.map(b => (
+                        <div key={b._id} className="card-premium" style={{ textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>💈</div>
+                          <h4>{b.name}</h4>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>{b.email}</p>
+                          {b.bio && <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{b.bio}</p>}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                            {b.services.map(s => (
+                              <span key={s} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600 }}>{s}</span>
+                            ))}
+                          </div>
+                          <span className={`status-badge ${b.isActive ? 'confirmed' : 'cancelled_by_shop'}`} style={{ marginTop: '12px', display: 'inline-block' }}>
+                            {b.isActive ? 'Aktiv' : 'Inaktiv'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                <div className="card-premium">
+                  <h3>Lägg till ny frisör / personal</h3>
+                  <form onSubmit={handleAddBarber} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="form-group"><label className="form-label">Förnamn</label><input type="text" required value={newBarberFirstName} onChange={e => setNewBarberFirstName(e.target.value)} className="form-input" placeholder="t.ex. Johan" /></div>
+                    <div className="form-group"><label className="form-label">Efternamn</label><input type="text" required value={newBarberLastName} onChange={e => setNewBarberLastName(e.target.value)} className="form-input" placeholder="t.ex. Andersson" /></div>
+                    <div className="form-group"><label className="form-label">E-postadress</label><input type="email" required value={newBarberEmail} onChange={e => setNewBarberEmail(e.target.value)} className="form-input" placeholder="johan@salong.se" /></div>
+                    <div className="form-group"><label className="form-label">Lösenord</label><input type="password" required value={newBarberPassword} onChange={e => setNewBarberPassword(e.target.value)} className="form-input" placeholder="Minst 6 tecken" /></div>
+                    <div className="form-group"><label className="form-label">Bio (kort beskrivning)</label><textarea value={newBarberBio} onChange={e => setNewBarberBio(e.target.value)} className="form-input" placeholder="Erfaren frisör specialiserad på herrklippning..." style={{ minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }} /></div>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Tjänster som utförs</label>
+                      {services.length === 0 ? (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Skapa först tjänster under fliken "Tjänster" för att kunna välja dem här.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '10px', borderRadius: 'var(--radius-sm)' }}>
+                          {services.map(s => (
+                            <label key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedServices.includes(s._id)}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setSelectedServices([...selectedServices, s._id]);
+                                  } else {
+                                    setSelectedServices(selectedServices.filter(id => id !== s._id));
+                                  }
+                                }}
+                              />
+                              {s.name} ({s.price} kr)
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button type="submit" disabled={savingBarber} className="btn btn-primary" style={{ width: '100%' }}>{savingBarber ? 'Sparar...' : 'Spara personal'}</button>
+                  </form>
+                </div>
+              </div>
             </div>
           )}
 
@@ -429,7 +596,7 @@ export default function ShopAdminDashboard() {
 
       <style jsx>{`
         .admin-dashboard-wrapper { display: flex; min-height: calc(100vh - 160px); }
-        .admin-sidebar { width: 260px; background-color: var(--secondary-hover); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); flex-shrink: 0; }
+        .admin-sidebar { width: 260px; background-color: var(--secondary-hover); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); flex-shrink: 0; min-height: calc(100vh - 160px); }
         .sidebar-brand { padding: 24px; font-family: var(--font-primary); font-size: 1.3rem; font-weight: 800; color: #f8fafc; border-bottom: 1px solid #1e293b; }
         .sidebar-brand span { color: var(--primary); }
         .sidebar-nav { display: flex; flex-direction: column; padding: 16px 0; }
@@ -466,6 +633,32 @@ export default function ShopAdminDashboard() {
           .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 8px 16px; }
           .sidebar-nav button { padding: 10px 16px; white-space: nowrap; }
           .admin-content-area { padding: 16px; }
+        }
+        .alert-banner {
+          padding: 14px 20px;
+          border-radius: var(--radius-md);
+          font-weight: 600;
+          margin-bottom: 24px;
+          font-size: 0.95rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .info-alert {
+          background-color: rgba(59, 130, 246, 0.08);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          color: #60a5fa;
+        }
+        .warning-alert {
+          background-color: rgba(245, 158, 11, 0.08);
+          border: 1px solid rgba(245, 158, 11, 0.2);
+          color: #fbbf24;
+        }
+        .danger-alert {
+          background-color: rgba(239, 68, 68, 0.08);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #f87171;
         }
       `}</style>
     </div>

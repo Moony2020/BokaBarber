@@ -35,6 +35,10 @@ function RegisterContent() {
     setSlug(formatted);
   }, [shopName]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -78,7 +82,7 @@ function RegisterContent() {
     <div className="register-page-wrap animate-fade-in">
       <div className="container flex-center">
         <div className="register-card glass-panel">
-          
+
           {success ? (
             <div className="success-register text-center">
               <span className="success-icon">🎉</span>
@@ -104,9 +108,9 @@ function RegisterContent() {
               {errorMsg && <div className="error-alert">⚠️ {errorMsg}</div>}
 
               <form onSubmit={handleSubmit} className="register-form">
-                
+
                 <h3 className="form-subheading">1. Salongsdetaljer</h3>
-                
+
                 <div className="form-group">
                   <label className="form-label">Salongens namn</label>
                   <input
@@ -134,7 +138,7 @@ function RegisterContent() {
                   </div>
                 </div>
 
-                <div className="grid-responsive" style={{ gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                <div className="grid-responsive compact-grid compact-grid-address">
                   <div className="form-group">
                     <label className="form-label">Gatuadress</label>
                     <input
@@ -170,9 +174,9 @@ function RegisterContent() {
                   </div>
                 </div>
 
-                <h3 className="form-subheading" style={{ marginTop: '24px' }}>2. Ägarkonto</h3>
+                <h3 className="form-subheading" style={{ marginTop: '14px' }}>2. Ägarkonto</h3>
 
-                <div className="grid-responsive" style={{ gap: '16px' }}>
+                <div className="grid-responsive compact-grid compact-grid-owner">
                   <div className="form-group">
                     <label className="form-label">Förnamn</label>
                     <input
@@ -239,35 +243,71 @@ function RegisterContent() {
 
       <style jsx>{`
         .register-page-wrap {
-          padding: 60px 24px;
+          min-height: calc(100vh - 85px);
+          padding: 120px 24px 60px 24px;
           background: radial-gradient(circle at 10% 80%, rgba(193, 141, 75, 0.04) 0%, transparent 50%);
+        }
+        @media (max-width: 768px) {
+          .register-page-wrap {
+            padding-top: 100px;
+          }
         }
         .register-card {
           width: 100%;
           max-width: 600px;
-          padding: 48px;
+          padding: 32px;
         }
         .register-header {
-          margin-bottom: 32px;
+          margin-bottom: 20px;
         }
         .register-header h2 {
-          font-size: 2rem;
-          margin-bottom: 8px;
+          font-size: 1.8rem;
+          margin-bottom: 6px;
         }
         .register-header p {
           color: var(--text-secondary);
+          font-size: 0.9rem;
         }
         .form-subheading {
-          font-size: 1.15rem;
-          margin-bottom: 16px;
+          font-size: 1rem;
+          margin-bottom: 4px;
+          margin-top: 0;
           border-bottom: 1px solid var(--border-color);
-          padding-bottom: 8px;
+          padding-bottom: 4px;
           color: var(--text-secondary);
         }
         .register-form {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 2px;
+        }
+        .register-form :global(.form-group) {
+          margin-bottom: 4px !important;
+          gap: 4px !important;
+        }
+        .register-form :global(.form-label) {
+          margin-bottom: 2px;
+          font-size: 0.92rem;
+        }
+        .register-form :global(.form-input) {
+          padding: 10px 14px;
+          min-height: 46px;
+        }
+        .compact-grid {
+          gap: 8px !important;
+          margin-bottom: 2px;
+        }
+        .compact-grid-address {
+          grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+        }
+        .compact-grid-owner {
+          grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
+        }
+        @media (max-width: 720px) {
+          .compact-grid-address,
+          .compact-grid-owner {
+            grid-template-columns: 1fr !important;
+          }
         }
         .slug-input-wrapper {
           display: flex;
@@ -282,7 +322,7 @@ function RegisterContent() {
           box-shadow: 0 0 0 4px rgba(193, 141, 75, 0.15);
         }
         .slug-prefix {
-          padding: 12px 0 12px 16px;
+          padding: 10px 0 10px 14px;
           color: var(--text-muted);
           font-weight: 600;
           user-select: none;
@@ -294,22 +334,22 @@ function RegisterContent() {
         }
         .register-btn {
           width: 100%;
-          margin-top: 16px;
-          padding: 14px;
+          margin-top: 4px;
+          padding: 13px;
         }
         .error-alert {
           background-color: #fee2e2;
           color: var(--color-danger);
-          padding: 12px;
+          padding: 10px;
           border-radius: var(--radius-sm);
           font-weight: 600;
-          margin-bottom: 24px;
+          margin-bottom: 12px;
         }
         .register-footer {
-          margin-top: 32px;
+          margin-top: 20px;
           font-size: 0.9rem;
           border-top: 1px solid var(--border-color);
-          padding-top: 24px;
+          padding-top: 16px;
         }
         .login-link {
           color: var(--primary);

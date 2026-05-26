@@ -25,6 +25,7 @@ interface ShopData {
   subStatus: string;
   mrr: number;
   createdAt: string;
+  isReady?: boolean;
 }
 
 interface AuditEntry {
@@ -44,6 +45,7 @@ export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<PlatformStats>({ totalShops: 0, activeShops: 0, suspendedSubs: 0, totalBookings: 0, totalUsers: 0, mrr: 0 });
   const [shops, setShops] = useState<ShopData[]>([]);
   const [logs, setLogs] = useState<AuditEntry[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -136,37 +138,82 @@ export default function SuperAdminDashboard() {
           )}
 
           {/* SHOPS LIST */}
-          {activeTab === 'salonger' && !loading && (
-            <div className="tab-pane card-premium">
-              <h3 style={{ marginBottom: '24px' }}>Registrerade salonger ({shops.length})</h3>
-              {shops.length === 0 ? (
-                <div className="empty-state">Inga salonger registrerade ännu.</div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead><tr><th>Salong</th><th>Stad</th><th>Ägare</th><th>Plan</th><th>Status</th><th>MRR</th><th>Åtgärd</th></tr></thead>
-                    <tbody>
-                      {shops.map(s => (
-                        <tr key={s._id}>
-                          <td><strong>{s.name}</strong><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/{s.slug}</span></td>
-                          <td>{s.address?.city || '-'}</td>
-                          <td>{s.ownerName}<br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.ownerEmail}</span></td>
-                          <td><span className="plan-badge">{s.planName}</span></td>
-                          <td><span className={`status-badge ${s.isActive ? 'confirmed' : 'cancelled_by_shop'}`}>{s.isActive ? 'Aktiv' : 'Avstängd'}</span></td>
-                          <td>{s.mrr} kr</td>
-                          <td>
-                            <button onClick={() => handleToggleShop(s._id, s.isActive)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: s.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                              {s.isActive ? 'Stäng av' : 'Aktivera'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {activeTab === 'salonger' && !loading && (() => {
+            const filteredShops = shops.filter(s => {
+              if (statusFilter === 'all') return true;
+              if (statusFilter === 'trial') return s.subStatus === 'trial';
+              if (statusFilter === 'active') return s.subStatus === 'active';
+              if (statusFilter === 'past_due') return s.subStatus === 'past_due';
+              if (statusFilter === 'suspended') return s.subStatus === 'suspended';
+              if (statusFilter === 'cancelled') return s.subStatus === 'cancelled';
+              if (statusFilter === 'not_ready') return !s.isReady;
+              return true;
+            });
+
+            return (
+              <div className="tab-pane card-premium">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+                  <h3 style={{ margin: 0 }}>Registrerade salonger ({filteredShops.length})</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <label htmlFor="status-filter" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Filtrera status:</label>
+                    <select
+                      id="status-filter"
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                      className="form-input"
+                      style={{ padding: '8px 12px', fontSize: '0.85rem', width: '220px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                    >
+                      <option value="all">Alla</option>
+                      <option value="trial">Trial (Provperiod)</option>
+                      <option value="active">Aktiv prenumeration</option>
+                      <option value="past_due">Past Due (Utebliven betalning)</option>
+                      <option value="suspended">Suspended (Avstängd)</option>
+                      <option value="cancelled">Cancelled (Avbruten)</option>
+                      <option value="not_ready">Inte redo (Saknar personal/tjänster)</option>
+                    </select>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {filteredShops.length === 0 ? (
+                  <div className="empty-state">Inga salonger matchar det valda filtret.</div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="admin-table">
+                      <thead><tr><th>Salong</th><th>Stad</th><th>Ägare</th><th>Plan</th><th>Status</th><th>MRR</th><th>Åtgärd</th></tr></thead>
+                      <tbody>
+                        {filteredShops.map(s => (
+                          <tr key={s._id}>
+                            <td>
+                              <strong>{s.name}</strong>
+                              {!s.isReady && <span style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>EJ REDO</span>}
+                              <br />
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/{s.slug}</span>
+                            </td>
+                            <td>{s.address?.city || '-'}</td>
+                            <td>{s.ownerName}<br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.ownerEmail}</span></td>
+                            <td><span className="plan-badge">{s.planName}</span></td>
+                            <td>
+                              <span className={`status-badge ${
+                                s.subStatus === 'active' || s.subStatus === 'trial' ? 'confirmed' : 'cancelled_by_shop'
+                              }`}>
+                                {s.subStatus === 'active' ? 'Aktiv' : s.subStatus === 'trial' ? 'Trial' : s.subStatus === 'suspended' ? 'Suspended' : s.subStatus === 'past_due' ? 'Past Due' : s.subStatus === 'cancelled' ? 'Cancelled' : 'Inaktiv'}
+                              </span>
+                            </td>
+                            <td>{s.mrr} kr</td>
+                            <td>
+                              <button onClick={() => handleToggleShop(s._id, s.isActive)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: s.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                                {s.isActive ? 'Stäng av' : 'Aktivera'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* AUDIT LOGS */}
           {activeTab === 'loggar' && !loading && (

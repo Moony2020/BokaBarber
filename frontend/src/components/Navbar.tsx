@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface User {
   id: string;
@@ -16,26 +16,85 @@ interface User {
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState('');
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super');
 
   useEffect(() => {
-    // Kontrollera om användaren är inloggad via localStorage eller session
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch (e) {
-        console.error(e);
+    const handleHashChange = () => {
+      setActiveHash(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
+
+    const handleScroll = () => {
+      // Trigger area offset for sticky header height
+      const scrollPosition = window.scrollY + 120;
+      const sections = ['funktioner', 'priser'];
+      let found = false;
+
+      for (const sectionId of sections) {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveHash('#' + sectionId);
+            found = true;
+            break;
+          }
+        }
       }
-    }
-  }, []);
+
+      if (!found && window.scrollY < 200) {
+        setActiveHash('');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const loadUser = () => {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    loadUser();
+
+    // Listen to local and storage events for reactive sync
+    window.addEventListener('auth-change', loadUser);
+    window.addEventListener('storage', loadUser);
+
+    return () => {
+      window.removeEventListener('auth-change', loadUser);
+      window.removeEventListener('storage', loadUser);
+    };
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
-      // Anropa utloggnings-API
       await fetch('http://localhost:5000/api/v1/auth/logout', { method: 'POST' });
       localStorage.removeItem('user');
       setUser(null);
+      window.dispatchEvent(new Event('auth-change'));
       router.push('/');
       router.refresh();
     } catch (error) {
@@ -51,21 +110,29 @@ export default function Navbar() {
   };
 
   return (
-    <header className="navbar-container">
+    <header className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}`}>
       <div className="container navbar-inner">
-        <Link href="/" className="navbar-logo">
-          Boka<span>Barber</span>
+        <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
+          <svg className="barber-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', width: 'var(--logo-icon-size, 34px)', height: 'var(--logo-icon-size, 34px)', filter: 'drop-shadow(0 2px 4px rgba(197, 160, 89, 0.15))' }}>
+            <circle cx="6" cy="6" r="3" />
+            <path d="M8.12 8.12 12 12" />
+            <path d="M20 4 12 12" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M9.8 14.2 12 12" />
+            <path d="M20 20 12 12" />
+          </svg>
+          <span className="brand-wordmark"><span className="brand-main">Boka</span><span className="brand-accent">Barber</span></span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="navbar-nav">
-          <Link href="/sok" className="nav-link">Sök Salong</Link>
-          <Link href="/#priser" className="nav-link">Priser</Link>
-          <Link href="/#funktioner" className="nav-link">Funktioner</Link>
+          <Link href="/sok" className={`nav-link ${pathname === '/sok' ? 'active' : ''}`}>Tjänster</Link>
+          <Link href="/#priser" className={`nav-link ${activeHash === '#priser' ? 'active' : ''}`}>Priser</Link>
+          <Link href="/#funktioner" className={`nav-link ${activeHash === '#funktioner' ? 'active' : ''}`}>Om oss</Link>
           
           {!user && (
-            <Link href="/registrera-salong" className="nav-link nav-highlight">
-              För företag
+            <Link href="/registrera-salong" className={`nav-link nav-highlight ${pathname === '/registrera-salong' ? 'active' : ''}`}>
+              Anslut salong
             </Link>
           )}
         </nav>
@@ -73,16 +140,26 @@ export default function Navbar() {
         <div className="navbar-actions">
           {user ? (
             <div className="user-profile-menu">
-              <Link href={getDashboardLink()} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.95rem' }}>
-                Instrumentpanel
+              <Link href={getDashboardLink()} className="btn btn-secondary btn-dashboard-nav" aria-label="Instrumentpanel">
+                <span className="dashboard-text">Instrumentpanel</span>
+                <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                  <rect x="3" y="3" width="7" height="9" />
+                  <rect x="14" y="3" width="7" height="5" />
+                  <rect x="14" y="12" width="7" height="9" />
+                  <rect x="3" y="16" width="7" height="5" />
+                </svg>
               </Link>
-              <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.95rem' }}>
+              <button onClick={handleLogout} className="btn btn-outline btn-logout-nav" style={{ padding: '8px 16px', fontSize: '0.95rem', borderWidth: '1px' }}>
                 Logga ut
               </button>
             </div>
           ) : (
-            <Link href="/login" className="btn btn-primary" style={{ padding: '10px 20px' }}>
-              Logga in
+            <Link href="/login" className="btn btn-primary btn-booking-nav" aria-label="Logga in">
+              <span className="login-text">Logga in</span>
+              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             </Link>
           )}
 
@@ -97,13 +174,13 @@ export default function Navbar() {
 
       {/* Mobile Menu Panel */}
       {menuOpen && (
-        <div className="mobile-nav-panel animate-fade-in">
-          <Link href="/sok" className="mobile-link" onClick={() => setMenuOpen(false)}>Sök Salong</Link>
-          <Link href="/#priser" className="mobile-link" onClick={() => setMenuOpen(false)}>Priser</Link>
-          <Link href="/#funktioner" className="mobile-link" onClick={() => setMenuOpen(false)}>Funktioner</Link>
+        <div className={`mobile-nav-panel animate-fade-in ${isDashboard ? 'dashboard-mobile-nav' : 'public-mobile-nav'}`}>
+          <Link href="/sok" className={`mobile-link ${pathname === '/sok' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Tjänster</Link>
+          <Link href="/#priser" className={`mobile-link ${activeHash === '#priser' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Priser</Link>
+          <Link href="/#funktioner" className={`mobile-link ${activeHash === '#funktioner' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Om oss</Link>
           {!user && (
-            <Link href="/registrera-salong" className="mobile-link mobile-highlight" onClick={() => setMenuOpen(false)}>
-              För företag (Registrera Salong)
+            <Link href="/registrera-salong" className={`mobile-link mobile-highlight ${pathname === '/registrera-salong' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+              Anslut salong (14 dagar gratis)
             </Link>
           )}
           {user ? (
@@ -123,146 +200,6 @@ export default function Navbar() {
         </div>
       )}
 
-      <style jsx>{`
-        .navbar-container {
-          background-color: var(--glass-bg);
-          border-bottom: 1px solid var(--border-color);
-          backdrop-filter: var(--glass-blur);
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          height: 80px;
-          display: flex;
-          align-items: center;
-        }
-        .navbar-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .navbar-logo {
-          font-family: var(--font-primary);
-          font-size: 1.6rem;
-          font-weight: 800;
-          letter-spacing: -0.5px;
-          color: var(--text-primary);
-        }
-        .navbar-logo span {
-          color: var(--primary);
-        }
-        .navbar-nav {
-          display: none;
-          align-items: center;
-          gap: 32px;
-        }
-        @media (min-width: 768px) {
-          .navbar-nav {
-            display: flex;
-          }
-        }
-        .nav-link {
-          font-weight: 600;
-          color: var(--text-secondary);
-          font-size: 0.95rem;
-        }
-        .nav-link:hover {
-          color: var(--primary);
-        }
-        .nav-highlight {
-          color: var(--primary);
-          border-bottom: 2px solid transparent;
-        }
-        .nav-highlight:hover {
-          border-bottom-color: var(--primary);
-        }
-        .navbar-actions {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .user-profile-menu {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .menu-toggle {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          width: 24px;
-          height: 18px;
-          background: transparent;
-          cursor: pointer;
-        }
-        @media (min-width: 768px) {
-          .menu-toggle {
-            display: none;
-          }
-        }
-        .menu-toggle span {
-          width: 100%;
-          height: 2px;
-          background-color: var(--text-primary);
-          transition: all var(--transition-fast);
-        }
-        .menu-toggle.open span:nth-child(1) {
-          transform: translateY(8px) rotate(45deg);
-        }
-        .menu-toggle.open span:nth-child(2) {
-          opacity: 0;
-        }
-        .menu-toggle.open span:nth-child(3) {
-          transform: translateY(-8px) rotate(-45deg);
-        }
-        /* Mobile menu */
-        .mobile-nav-panel {
-          position: fixed;
-          top: 80px;
-          left: 0;
-          right: 0;
-          background-color: var(--bg-secondary);
-          border-bottom: 1px solid var(--border-color);
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          box-shadow: var(--shadow-lg);
-        }
-        @media (min-width: 768px) {
-          .mobile-nav-panel {
-            display: none;
-          }
-        }
-        .mobile-link {
-          font-family: var(--font-primary);
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-        .mobile-link:hover {
-          color: var(--primary);
-        }
-        .mobile-highlight {
-          color: var(--primary);
-        }
-        .mobile-logout-btn {
-          background-color: var(--bg-tertiary);
-          border: 1px solid var(--border-color);
-          padding: 12px;
-          border-radius: var(--radius-md);
-          font-weight: 600;
-          color: var(--color-danger);
-          cursor: pointer;
-        }
-        .mobile-login-btn {
-          background-color: var(--primary);
-          color: var(--text-white);
-          padding: 12px;
-          border-radius: var(--radius-md);
-          font-weight: 600;
-          text-align: center;
-        }
-      `}</style>
     </header>
   );
 }

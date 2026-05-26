@@ -50,6 +50,40 @@ app.use(cookieParser());
 // Connect Database
 connectDB();
 
+// Reusable helper to check and expire active trials for a shop
+export const expireTrialsIfNeeded = async (shopId: string | Types.ObjectId): Promise<void> => {
+  try {
+    const sub = await Subscription.findOne({ shopId: new Types.ObjectId(shopId.toString()) });
+    if (sub && sub.status === 'trial' && new Date(sub.trialEndsAt) < new Date()) {
+      sub.status = 'suspended';
+      await sub.save();
+      await Shop.findByIdAndUpdate(shopId, { isActive: false });
+      console.log(`[Subscription Guard] Expired trial for shop ${shopId} and set to suspended.`);
+    }
+  } catch (error) {
+    console.error(`Error checking trial expiration for shop ${shopId}:`, error);
+  }
+};
+
+// Daily cron/job-friendly function for future production use to expire all trials
+export const runDailyTrialExpirationCheck = async (): Promise<void> => {
+  try {
+    const expiredSubs = await Subscription.find({
+      status: 'trial',
+      trialEndsAt: { $lt: new Date() }
+    });
+    console.log(`[Cron Job] Found ${expiredSubs.length} expired trials to suspend.`);
+    for (const sub of expiredSubs) {
+      sub.status = 'suspended';
+      await sub.save();
+      await Shop.findByIdAndUpdate(sub.shopId, { isActive: false });
+      console.log(`[Cron Job] Suspended trial for shop ${sub.shopId}.`);
+    }
+  } catch (error) {
+    console.error('[Cron Job] Error running daily trial expiration check:', error);
+  }
+};
+
 // ===========================================================================
 // 🗝️ AUTH ROUTES
 // ===========================================================================
@@ -109,6 +143,21 @@ app.post('/api/v1/auth/register-shop', async (req, res) => {
       firstName, lastName, shopId: savedShop._id, emailVerified: false
     });
     const savedUser = await newUser.save({ session });
+
+    // Fetch default "Bas" plan
+    const plan = await Plan.findOne({ name: 'Bas' });
+    if (!plan) {
+      throw new Error('Default Bas plan not found in database. Seed the database first.');
+    }
+
+    const defaultSubscription = new Subscription({
+      shopId: savedShop._id,
+      planId: plan._id,
+      status: 'trial',
+      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+      currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    });
+    await defaultSubscription.save({ session });
 
     await session.commitTransaction();
     session.endSession();
@@ -195,6 +244,36 @@ app.get('/api/v1/shops/search', async (req, res) => {
       shops = shops.filter(s => shopIds.some((id: Types.ObjectId) => id.toString() === (s._id as Types.ObjectId).toString()));
     }
 
+    // Dynamically filter active/trial and fully ready salons
+    const verifiedShops = await Promise.all(
+      shops.map(async (shop) => {
+        // Run trial expiration detector
+        await expireTrialsIfNeeded(shop._id);
+
+        // 1. Subscription Status validation
+        const sub = await Subscription.findOne({ shopId: shop._id });
+        if (!sub) return null;
+        if (sub.status !== 'trial' && sub.status !== 'active') return null;
+
+        // 2. Active service verification
+        const serviceCount = await Service.countDocuments({ shopId: shop._id, isActive: true });
+        if (serviceCount === 0) return null;
+
+        // 3. Active barber verification
+        const barberCount = await BarberProfile.countDocuments({ shopId: shop._id, isActive: true });
+        if (barberCount === 0) return null;
+
+        // 4. Opening hours verification
+        const settings = await ShopSettings.findOne({ shopId: shop._id });
+        const hasOpeningHours = settings?.openingHours?.some(oh => oh.isOpen) ?? false;
+        if (!hasOpeningHours) return null;
+
+        return shop;
+      })
+    );
+
+    shops = verifiedShops.filter(Boolean) as any[];
+
     return res.json({ shops });
   } catch (error) {
     console.error('Sökfel:', error);
@@ -205,8 +284,11 @@ app.get('/api/v1/shops/search', async (req, res) => {
 // Get single shop by slug (public booking page)
 app.get('/api/v1/shops/:slug', async (req, res) => {
   try {
-    const shop = await Shop.findOne({ slug: req.params.slug, isActive: true }).lean();
+    const shop = await Shop.findOne({ slug: req.params.slug }).lean();
     if (!shop) return res.status(404).json({ error: 'Salongen hittades inte.' });
+
+    // Run trial expiration detector
+    await expireTrialsIfNeeded(shop._id);
 
     const settings = await ShopSettings.findOne({ shopId: shop._id }).lean();
     const services = await Service.find({ shopId: shop._id, isActive: true }).lean();
@@ -226,7 +308,20 @@ app.get('/api/v1/shops/:slug', async (req, res) => {
 
     const reviews = await Review.find({ shopId: shop._id }).sort({ createdAt: -1 }).limit(10).lean();
 
-    return res.json({ shop, settings, services, barbers, reviews });
+    // Evaluate subscription and readiness statusFlag
+    const sub = await Subscription.findOne({ shopId: shop._id });
+    let statusFlag: 'ready' | 'not_ready' | 'suspended' = 'ready';
+
+    if (!sub || sub.status === 'suspended' || sub.status === 'cancelled' || (sub.status === 'trial' && new Date(sub.trialEndsAt) < new Date())) {
+      statusFlag = 'suspended';
+    } else {
+      const hasOpeningHours = settings?.openingHours?.some(oh => oh.isOpen) ?? false;
+      if (services.length === 0 || barbers.length === 0 || !hasOpeningHours) {
+        statusFlag = 'not_ready';
+      }
+    }
+
+    return res.json({ shop, settings, services, barbers, reviews, statusFlag });
   } catch (error) {
     console.error('Hämtningsfel:', error);
     return res.status(500).json({ error: 'Kunde inte hämta salongsdata.' });
@@ -323,6 +418,17 @@ app.post('/api/v1/bookings/hold', async (req, res) => {
   session.startTransaction();
 
   try {
+    // Ensure subscription is active or in a valid trial state
+    await expireTrialsIfNeeded(shopId);
+    const sub = await Subscription.findOne({ shopId: new Types.ObjectId(shopId) }).session(session);
+    if (!sub || sub.status === 'suspended' || sub.status === 'cancelled' || (sub.status === 'trial' && new Date(sub.trialEndsAt) < new Date())) {
+      await session.abortTransaction(); session.endSession();
+      return res.status(402).json({
+        error: 'Denna salong tar inte emot bokningar just nu på grund av abonnemangsstatus.',
+        code: 'SUBSCRIPTION_REQUIRED'
+      });
+    }
+
     const service = await Service.findById(serviceId).session(session);
     if (!service || !service.isActive) {
       await session.abortTransaction(); session.endSession();
@@ -421,22 +527,32 @@ app.post('/api/v1/bookings/hold', async (req, res) => {
 app.get('/api/v1/admin/:shopId/dashboard', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const shopId = new Types.ObjectId(req.params.shopId);
+
+    // Run trial expiration detector
+    await expireTrialsIfNeeded(shopId);
+
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const [todayBookings, monthBookings, totalCustomers, activeBarbers] = await Promise.all([
+    const [todayBookings, monthBookings, totalCustomers, activeBarbers, sub] = await Promise.all([
       Booking.countDocuments({ shopId, startTime: { $gte: today, $lt: tomorrow } }),
       Booking.find({ shopId, createdAt: { $gte: monthStart }, status: { $in: ['confirmed', 'paid', 'completed'] } }).lean(),
       CustomerProfile.countDocuments({ shopId }),
-      BarberProfile.countDocuments({ shopId, isActive: true })
+      BarberProfile.countDocuments({ shopId, isActive: true }),
+      Subscription.findOne({ shopId })
     ]);
 
     const monthRevenue = monthBookings.reduce((sum, b) => sum + b.totalPrice, 0);
 
     return res.json({
       todayBookings, monthRevenue, totalCustomers, activeBarbers,
-      totalMonthBookings: monthBookings.length
+      totalMonthBookings: monthBookings.length,
+      subscription: sub ? {
+        status: sub.status,
+        trialEndsAt: sub.trialEndsAt,
+        gracePeriodEndsAt: sub.gracePeriodEndsAt
+      } : null
     });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte hämta statistik.' });
@@ -643,6 +759,12 @@ app.put('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_a
 // Platform dashboard
 app.get('/api/v1/super/dashboard', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
   try {
+    // Run trial expiration detector for all shops
+    const allShops = await Shop.find().lean();
+    for (const shop of allShops) {
+      await expireTrialsIfNeeded(shop._id);
+    }
+
     const [totalShops, activeShops, suspendedSubs, totalBookings, totalUsers] = await Promise.all([
       Shop.countDocuments(),
       Shop.countDocuments({ isActive: true }),
@@ -665,15 +787,27 @@ app.get('/api/v1/super/shops', authenticateUser, requireRoles('super_admin'), as
   try {
     const shops = await Shop.find().lean();
     const enriched = await Promise.all(shops.map(async (shop) => {
+      // Expiry trial detector
+      await expireTrialsIfNeeded(shop._id);
+
       const owner = await User.findOne({ shopId: shop._id, role: 'shop_admin' }).lean();
       const sub = await Subscription.findOne({ shopId: shop._id }).populate('planId').lean();
+
+      // Calculate readiness status
+      const serviceCount = await Service.countDocuments({ shopId: shop._id, isActive: true });
+      const barberCount = await BarberProfile.countDocuments({ shopId: shop._id, isActive: true });
+      const settings = await ShopSettings.findOne({ shopId: shop._id });
+      const hasOpeningHours = settings?.openingHours?.some(oh => oh.isOpen) ?? false;
+      const isReady = serviceCount > 0 && barberCount > 0 && hasOpeningHours;
+
       return {
         ...shop,
         ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Okänd',
         ownerEmail: owner?.email || '',
         planName: sub ? (sub.planId as any)?.name || 'Okänd' : 'Ingen plan',
         subStatus: sub?.status || 'no_subscription',
-        mrr: sub?.status === 'active' ? ((sub.planId as any)?.priceMonthly || 0) : 0
+        mrr: sub?.status === 'active' ? ((sub.planId as any)?.priceMonthly || 0) : 0,
+        isReady
       };
     }));
     return res.json({ shops: enriched });

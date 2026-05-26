@@ -64,7 +64,7 @@ const ShopSchema = new Schema<IShop>({
     country: { type: String, default: 'Sweden' },
     coordinates: {
       type: { type: String, enum: ['Point'], default: 'Point' },
-      coordinates: { type: [Number] } // [longitude, latitude]
+      coordinates: { type: [Number], default: [18.0686, 59.3293] } // [longitude, latitude] (Stockholm default)
     }
   },
   rating: { type: Number, default: 0 },
@@ -305,8 +305,8 @@ const PlanSchema = new Schema<IPlan>({
 // ==========================================
 export interface ISubscription extends Document {
   shopId: Types.ObjectId;
-  stripeSubscriptionId: string;
-  stripeCustomerId: string;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
   planId: Types.ObjectId;
   status: 'trial' | 'active' | 'past_due' | 'suspended' | 'cancelled';
   trialEndsAt: Date;
@@ -316,8 +316,8 @@ export interface ISubscription extends Document {
 
 const SubscriptionSchema = new Schema<ISubscription>({
   shopId: { type: Schema.Types.ObjectId, ref: 'Shop', required: true, unique: true, index: true },
-  stripeSubscriptionId: { type: String, required: true, unique: true },
-  stripeCustomerId: { type: String, required: true },
+  stripeSubscriptionId: { type: String, required: false, unique: true, sparse: true },
+  stripeCustomerId: { type: String, required: false },
   planId: { type: Schema.Types.ObjectId, ref: 'Plan', required: true },
   status: { type: String, enum: ['trial', 'active', 'past_due', 'suspended', 'cancelled'], required: true },
   trialEndsAt: { type: Date, required: true },

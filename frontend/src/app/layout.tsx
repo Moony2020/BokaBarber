@@ -1,7 +1,22 @@
 import type { Metadata } from 'next';
+import { Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+const playfairDisplay = Playfair_Display({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  weight: ['300', '400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'BokaBarber | Premium Bokningssystem för Frisörsalonger',
@@ -15,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
-      <body>
+      <body className={`${playfairDisplay.variable} ${plusJakartaSans.variable}`}>
         <div className="app-layout">
           <Navbar />
           <main className="main-content">

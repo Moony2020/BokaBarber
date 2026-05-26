@@ -23,7 +23,8 @@ export default function LoginPage() {
       if (res.ok) {
         const data = res.data as { user: { role: string; shopId?: string; id: string; email: string; firstName: string; lastName: string } };
         localStorage.setItem('user', JSON.stringify(data.user));
-        
+        window.dispatchEvent(new Event('auth-change'));
+
         if (data.user.role === 'super_admin') {
           router.push('/super');
         } else if (data.user.role === 'shop_admin') {
@@ -31,7 +32,7 @@ export default function LoginPage() {
         } else {
           router.push('/');
         }
-        
+
         router.refresh();
       } else {
         const errData = res.data as { error?: string };
@@ -45,7 +46,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-container flex-center animate-fade-in">
+    <div className="login-container animate-fade-in">
       <div className="login-card glass-panel">
         <div className="login-header text-center">
           <h2>Välkommen tillbaka</h2>
@@ -94,17 +95,25 @@ export default function LoginPage() {
 
       <style jsx>{`
         .login-container {
-          min-height: calc(100vh - 160px);
-          padding: 40px 24px;
+          min-height: calc(100vh - 85px);
+          padding: 130px 24px 60px 24px;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
           background: radial-gradient(circle at 80% 20%, rgba(193, 141, 75, 0.04) 0%, transparent 50%);
+        }
+        @media (max-width: 768px) {
+          .login-container {
+            padding-top: 100px;
+          }
         }
         .login-card {
           width: 100%;
           max-width: 440px;
-          padding: 48px 40px;
+          padding: 34px 32px;
         }
         .login-header {
-          margin-bottom: 32px;
+          margin-bottom: 18px;
         }
         .login-header h2 {
           font-size: 1.8rem;
@@ -117,12 +126,24 @@ export default function LoginPage() {
         .login-form {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 6px;
+        }
+        .login-form :global(.form-group) {
+          margin-bottom: 4px !important;
+          gap: 4px !important;
+        }
+        .login-form :global(.form-label) {
+          margin-bottom: 2px;
+          font-size: 0.92rem;
+        }
+        .login-form :global(.form-input) {
+          padding: 10px 14px;
+          min-height: 46px;
         }
         .login-btn {
           width: 100%;
-          margin-top: 8px;
-          padding: 14px;
+          margin-top: 4px;
+          padding: 12px;
         }
         .error-alert {
           background-color: #fee2e2;
@@ -134,13 +155,13 @@ export default function LoginPage() {
           font-size: 0.9rem;
         }
         .login-footer {
-          margin-top: 32px;
+          margin-top: 18px;
           font-size: 0.9rem;
           border-top: 1px solid var(--border-color);
-          padding-top: 24px;
+          padding-top: 14px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
         .login-footer p {
           color: var(--text-secondary);

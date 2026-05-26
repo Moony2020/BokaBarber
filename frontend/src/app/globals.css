@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
-
 /* =========================================================================
-   💅 DESIGN SYSTEM VARIABLES & THEMES (Vanilla CSS)
+   💅 DESIGN SYSTEM VARIABLES & THEMES (Skandinavisk Lyx: White + Purple + Gold)
    ========================================================================= */
 
 .app-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: var(--bg-primary);
 }
 .main-content {
   flex: 1;
@@ -17,53 +16,55 @@
 
 :root {
   /* Typography */
-  --font-primary: 'Outfit', 'Inter', sans-serif;
-  --font-secondary: 'Inter', sans-serif;
+  --font-primary: var(--font-playfair), Georgia, serif;
+  --font-secondary: var(--font-plus-jakarta), 'Segoe UI', sans-serif;
 
-  /* Premium HSL Color Palette (Light Mode Base) */
-  --primary-hue: 33;
-  --primary-sat: 45%;
-  --primary-light: 45%; /* Luxe Bronze Gold */
+  /* Premium HSL Color Palette (White + Purple + Gold) */
+  --bg-primary: #faf9f6; /* Elegant warm off-white */
+  --bg-secondary: #ffffff; /* Pure white */
+  --bg-tertiary: #f5f2eb; /* Soft warm beige/cream */
   
-  --primary: hsl(var(--primary-hue), var(--primary-sat), var(--primary-light));
-  --primary-hover: hsl(var(--primary-hue), var(--primary-sat), calc(var(--primary-light) - 8%));
-  --primary-lightest: hsl(var(--primary-hue), var(--primary-sat), 95%);
+  --primary: #2d004d; /* Deep Royal Purple */
+  --primary-hover: #40066b;
+  --primary-light: #f0e6f7;
+  --primary-lightest: #fbf8fe;
   
-  --secondary: #1e293b; /* Slate 800 */
-  --secondary-hover: #0f172a; /* Slate 900 */
+  --accent: #c5a059; /* Warm luxury gold */
+  --accent-hover: #b49048;
+  --accent-gradient: linear-gradient(135deg, #dfba6b 0%, #c5a059 100%);
   
-  --bg-primary: #f8fafc; /* Slate 50 */
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9; /* Slate 100 */
+  --secondary: #1b0330; /* Dark purple-black for text */
+  --secondary-hover: #2e0854;
   
-  --text-primary: #0f172a; /* Slate 900 */
-  --text-secondary: #475569; /* Slate 600 */
-  --text-muted: #94a3b8; /* Slate 400 */
+  --text-primary: #1b0330; /* Darkest purple */
+  --text-secondary: #5c4d6a; /* Muted purple-gray */
+  --text-muted: #9d8ea8; /* Muted lilac-gray */
   --text-white: #ffffff;
   
-  --border-color: #e2e8f0; /* Slate 200 */
-  --border-focus: hsl(var(--primary-hue), var(--primary-sat), 55%);
+  --border-color: #e8e3d9; /* Very soft warm beige border */
+  --border-focus: #c5a059;
+  --border-gold: rgba(197, 160, 89, 0.25);
   
   /* Status Colors */
-  --color-success: #10b981; /* Emerald 500 */
-  --color-warning: #f59e0b; /* Amber 500 */
-  --color-danger: #ef4444;  /* Red 500 */
-  --color-info: #3b82f6;    /* Blue 500 */
+  --color-success: #10b981;
+  --color-warning: #c5a059;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
   
   /* Glassmorphism & UI Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-premium: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 2px 4px rgba(27, 3, 48, 0.02);
+  --shadow-md: 0 10px 25px -5px rgba(27, 3, 48, 0.04), 0 8px 10px -6px rgba(27, 3, 48, 0.02);
+  --shadow-lg: 0 20px 40px -15px rgba(27, 3, 48, 0.07);
+  --shadow-premium: 0 30px 60px -10px rgba(45, 0, 77, 0.05), 0 0 40px rgba(197, 160, 89, 0.04);
   
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(226, 232, 240, 0.8);
-  --glass-blur: blur(12px);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(232, 227, 217, 0.8);
+  --glass-blur: blur(16px);
 
   /* Borders & Radius */
   --radius-sm: 6px;
   --radius-md: 12px;
-  --radius-lg: 18px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
   
   /* Transitions */
@@ -73,24 +74,25 @@
 
   /* Containers */
   --container-max-width: 1200px;
+
+  /* Custom Logo Variable */
+  --logo-icon-size: 34px;
 }
 
-/* Automatic Dark Mode Override for Premium/Admin views */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #0b0f19; /* Deep Slate Night */
-    --bg-secondary: #111827; /* Gray 900 */
-    --bg-tertiary: #1f2937; /* Gray 800 */
-    
-    --text-primary: #f9fafb; /* Gray 50 */
-    --text-secondary: #9ca3af; /* Gray 400 */
-    --text-muted: #6b7280; /* Gray 500 */
-    
-    --border-color: #374151; /* Gray 700 */
-    
-    --glass-bg: rgba(17, 24, 39, 0.75);
-    --glass-border: rgba(55, 65, 81, 0.5);
-  }
+/* =========================================================================
+   💅 CLASS OVERRIDES FOR PUBLIC PAGES (Shared Elegant Swedish Theme)
+   ========================================================================= */
+.public-theme {
+  --bg-primary: #faf9f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f2eb;
+  
+  --text-primary: #1b0330;
+  --text-secondary: #5c4d6a;
+  --text-muted: #9d8ea8;
+  
+  --border-color: #e8e3d9;
+  --border-focus: #c5a059;
 }
 
 /* =========================================================================
@@ -107,6 +109,7 @@
 
 html, body {
   min-height: 100vh;
+  min-width: 350px;
   font-family: var(--font-secondary);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -165,19 +168,20 @@ button, input, select, textarea {
   gap: 24px;
 }
 
-/* Glassmorphism cards */
+/* Glassmorphism cards with subtle gold accents */
 .card-premium {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 24px;
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .card-premium:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-premium);
+  border-color: var(--accent);
 }
 
 .glass-panel {
@@ -199,7 +203,7 @@ button, input, select, textarea {
   gap: 8px;
   padding: 12px 24px;
   border-radius: var(--radius-md);
-  font-family: var(--font-primary);
+  font-family: var(--font-secondary);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-normal);
@@ -207,15 +211,17 @@ button, input, select, textarea {
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  color: var(--text-white);
-  box-shadow: 0 4px 14px 0 rgba(193, 141, 75, 0.4);
+  background: var(--accent-gradient);
+  color: var(--primary) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px 0 rgba(197, 160, 89, 0.3);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px 0 rgba(193, 141, 75, 0.5);
+  box-shadow: 0 6px 20px 0 rgba(197, 160, 89, 0.4);
+  color: var(--primary) !important;
+  opacity: 0.95;
 }
 
 .btn-primary:active {
@@ -223,24 +229,24 @@ button, input, select, textarea {
 }
 
 .btn-secondary {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--primary);
+  color: var(--text-white);
 }
 
 .btn-secondary:hover {
-  background-color: var(--border-color);
+  background-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 0, 77, 0.2);
 }
 
 .btn-outline {
   background-color: transparent;
-  border: 2px solid var(--primary);
-  color: var(--primary);
+  border: 2px solid var(--accent);
+  color: var(--accent);
 }
 
 .btn-outline:hover {
-  background-color: var(--primary);
+  background: var(--accent-gradient);
   color: var(--text-white);
   transform: translateY(-2px);
 }
@@ -273,8 +279,8 @@ button, input, select, textarea {
 }
 
 .form-input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 4px rgba(193, 141, 75, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.15);
 }
 
 /* =========================================================================
@@ -307,4 +313,503 @@ button, input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* =========================================================================
+   ⚓ STICKY NAVBAR SCROLL MARGIN OFFSETS
+   ========================================================================= */
+section[id] {
+  scroll-margin-top: 75px !important;
+}
+@media (max-width: 768px) {
+  section[id] {
+    scroll-margin-top: 65px !important;
+  }
+}
+
+/* =========================================================================
+   🍔 NAVBAR GLOBAL STYLES (No next-scoped styled-jsx traps)
+   ========================================================================= */
+.navbar-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 85px;
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-normal);
+}
+
+.public-navbar {
+  background-color: rgba(250, 249, 246, 0.85);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px rgba(45, 0, 77, 0.02);
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.navbar-logo,
+.footer-logo {
+  font-family: var(--font-primary) !important;
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--text-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.footer-logo {
+  display: inline-flex !important;
+}
+
+.navbar-logo:hover,
+.footer-logo:hover {
+  transform: scale(1.01) !important;
+}
+
+/* Force standard sizing on the luxury scissors icon */
+.barber-logo-icon {
+  color: var(--accent) !important;
+  width: 22px !important;
+  height: 22px !important;
+  flex-shrink: 0 !important;
+  transform: translateY(1px) !important;
+  transition: transform var(--transition-fast) !important;
+}
+
+.navbar-logo:hover .barber-logo-icon,
+.footer-logo:hover .barber-logo-icon {
+  transform: translateY(2px) scale(1.05) !important;
+}
+
+.brand-wordmark {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-family: var(--font-primary) !important;
+  font-size: inherit !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1 !important;
+}
+
+.brand-main,
+.brand-main font {
+  color: var(--text-primary) !important;
+  font-family: var(--font-primary) !important;
+  font-weight: 800 !important;
+  font-size: inherit !important;
+  letter-spacing: -0.015em !important;
+  line-height: inherit !important;
+}
+
+.brand-accent,
+.brand-accent font {
+  color: var(--accent) !important;
+  font-family: var(--font-primary) !important;
+  font-weight: 800 !important;
+  font-size: inherit !important;
+  letter-spacing: -0.015em !important;
+  line-height: inherit !important;
+}
+
+.brand-dot {
+  color: var(--accent) !important;
+  margin-left: 1px !important;
+  font-family: var(--font-primary) !important;
+  font-weight: 800 !important;
+  font-size: inherit !important;
+}
+
+/* 🎯 Broad Google Translate <font> override block:
+   Injecting font tags dynamically wraps text in Times/serif font-size: small.
+   We force any font tag within the brand elements to copy parent styles exactly. */
+.navbar-logo font,
+.footer-logo font,
+.brand-wordmark font,
+.brand-main font,
+.brand-accent font,
+.brand-dot font {
+  font-family: var(--font-primary) !important;
+  font-size: inherit !important;
+  font-weight: 800 !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+  line-height: inherit !important;
+  text-transform: inherit !important;
+  vertical-align: baseline !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* Make sure the main layout wrapper for font inside logo does not break flex layout */
+.navbar-logo > font,
+.footer-logo > font {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  font-family: var(--font-primary) !important;
+  font-size: inherit !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+/* Responsive adjustments for brand logo sizes */
+@media (max-width: 1200px) {
+  .navbar-logo,
+  .footer-logo {
+    font-size: 1.4rem !important;
+    gap: 7px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .navbar-logo,
+  .footer-logo {
+    font-size: 1.3rem !important;
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar-logo,
+  .footer-logo {
+    font-size: 1.2rem !important;
+    gap: 6px !important;
+  }
+}
+
+.navbar-nav {
+  display: none;
+  align-items: center;
+  gap: 24px;
+}
+
+@media (min-width: 1200px) {
+  .navbar-nav {
+    gap: 40px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .navbar-nav {
+    display: flex;
+  }
+}
+
+.nav-link {
+  font-weight: 600;
+  color: var(--text-secondary) !important;
+  font-size: 1.05rem;
+  position: relative;
+  padding: 8px 0;
+  transition: all var(--transition-fast);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent-gradient);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--transition-normal);
+  border-radius: var(--radius-full);
+}
+
+.nav-link:hover {
+  color: var(--accent) !important;
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.nav-link.active {
+  color: var(--primary) !important;
+  font-weight: 700;
+}
+
+.nav-link.active::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.nav-highlight {
+  color: var(--accent) !important;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-profile-menu {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.menu-toggle {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 24px;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+}
+
+@media (min-width: 1024px) {
+  .menu-toggle {
+    display: none;
+  }
+}
+
+.menu-toggle span {
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary);
+  transition: all var(--transition-fast);
+  border-radius: 2px;
+}
+
+.menu-toggle.open span:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.menu-toggle.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.open span:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+/* 📱 Mobile Menu Panel */
+.mobile-nav-panel {
+  position: fixed;
+  top: 85px;
+  left: 0;
+  right: 0;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-lg);
+  z-index: 99;
+}
+
+.public-mobile-nav {
+  background-color: rgba(250, 249, 246, 0.98);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(20px);
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav-panel {
+    display: none;
+  }
+}
+
+.mobile-link {
+  font-family: var(--font-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-link:hover {
+  color: var(--accent);
+  padding-left: 8px;
+}
+
+.mobile-link.active {
+  color: var(--accent) !important;
+  padding-left: 8px;
+}
+
+.mobile-link.active::before {
+  content: '•';
+  color: var(--accent);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.mobile-highlight {
+  color: var(--accent) !important;
+}
+
+.mobile-logout-btn {
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mobile-logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.mobile-login-btn {
+  background: var(--accent-gradient);
+  color: white;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.2);
+}
+
+/* 🏢 Dashboard Navbar Light Theme Overrides */
+.dashboard-navbar {
+  background-color: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+  color: var(--text-primary) !important;
+}
+
+.dashboard-navbar .nav-link {
+  color: var(--text-secondary) !important;
+}
+
+.dashboard-navbar .nav-link:hover {
+  color: var(--text-primary) !important;
+}
+
+.dashboard-navbar .navbar-logo {
+  color: var(--text-primary) !important;
+}
+
+.dashboard-mobile-nav {
+  background-color: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.dashboard-mobile-nav .mobile-link {
+  color: var(--text-primary) !important;
+}
+
+/* 📱 Responsive Logo Icon Sizing overrides */
+@media (max-width: 1200px) {
+  :root {
+    --logo-icon-size: 30px;
+  }
+}
+@media (max-width: 1024px) {
+  :root {
+    --logo-icon-size: 28px;
+  }
+}
+@media (max-width: 640px) {
+  :root {
+    --logo-icon-size: 24px;
+  }
+}
+
+/* =========================================================================
+   👤 MOBILE NAVBAR USER ICON COLLAPSE OVERRIDES
+   ========================================================================= */
+
+/* Desktop / Tablet default styling: show text, hide icons */
+.login-icon,
+.dashboard-icon {
+  display: none !important;
+}
+.login-text,
+.dashboard-text {
+  display: inline !important;
+}
+.btn-booking-nav {
+  padding: 10px 24px !important;
+}
+.btn-dashboard-nav {
+  padding: 10px 20px !important;
+  font-size: 0.95rem !important;
+}
+
+/* Mobile responsive collapse - screens up to 768px */
+@media (max-width: 768px) {
+  .navbar-container {
+    height: 74px !important;
+  }
+  .mobile-nav-panel {
+    top: 74px !important;
+  }
+  .navbar-actions {
+    gap: 16px !important;
+  }
+  .login-text,
+  .dashboard-text,
+  .btn-logout-nav {
+    display: none !important;
+  }
+  .login-icon,
+  .dashboard-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .btn-booking-nav,
+  .btn-dashboard-nav {
+    padding: 0 !important;
+    border-radius: 9999px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: var(--shadow-sm) !important;
+    background: var(--accent-gradient) !important;
+    color: var(--primary) !important;
+  }
+  
+  /* Make sure the icons inside these collapsed buttons are perfectly sized */
+  .login-icon svg,
+  .dashboard-icon svg,
+  .btn-booking-nav svg,
+  .btn-dashboard-nav svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .navbar-logo {
+    font-size: 1.3rem !important;
+    gap: 8px !important;
+  }
+
+  .barber-logo-icon {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .brand-accent {
+    margin-left: 4px !important;
+  }
 }
