@@ -70,13 +70,13 @@ export default function ShopAdminDashboard() {
   // Service form
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
-  const [newServiceDuration, setNewServiceDuration] = useState(30);
-  const [newServicePrice, setNewServicePrice] = useState(400);
+  const [newServiceDuration, setNewServiceDuration] = useState<number | ''>(30);
+  const [newServicePrice, setNewServicePrice] = useState<number | ''>(400);
   const [savingService, setSavingService] = useState(false);
 
   // Settings form
-  const [cancellationHours, setCancellationHours] = useState(24);
-  const [depositPct, setDepositPct] = useState(0);
+  const [cancellationHours, setCancellationHours] = useState<number | ''>(24);
+  const [depositPct, setDepositPct] = useState<number | ''>(0);
   const [openTime, setOpenTime] = useState('09:00');
   const [closeTime, setCloseTime] = useState('18:00');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -199,13 +199,23 @@ export default function ShopAdminDashboard() {
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newServiceDuration === '' || newServicePrice === '') {
+      setError('Tid och pris måste anges.');
+      return;
+    }
     setSavingService(true);
     const res = await api.adminCreateService(shopId, {
       name: newServiceName, description: newServiceDesc,
-      durationMinutes: newServiceDuration, price: newServicePrice
+      durationMinutes: Number(newServiceDuration), price: Number(newServicePrice)
     });
     setSavingService(false);
-    if (res.ok) { setNewServiceName(''); setNewServiceDesc(''); loadServices(); }
+    if (res.ok) {
+      setNewServiceName('');
+      setNewServiceDesc('');
+      setNewServiceDuration(30);
+      setNewServicePrice(400);
+      loadServices();
+    }
   };
 
   const handleToggleService = async (serviceId: string) => {
@@ -216,8 +226,8 @@ export default function ShopAdminDashboard() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     await api.adminUpdateSettings(shopId, {
-      cancellationWindowHours: cancellationHours,
-      depositPercentage: depositPct
+      cancellationWindowHours: cancellationHours === '' ? 0 : Number(cancellationHours),
+      depositPercentage: depositPct === '' ? 0 : Number(depositPct)
     });
     setSavingSettings(false);
     alert('Inställningar sparade!');
@@ -452,11 +462,11 @@ export default function ShopAdminDashboard() {
 
                 <div className="card-premium">
                   <h3>Lägg till ny tjänst</h3>
-                  <form onSubmit={handleAddService} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <form onSubmit={handleAddService} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="form-group"><label className="form-label">Namn</label><input type="text" required value={newServiceName} onChange={e => setNewServiceName(e.target.value)} className="form-input" placeholder="t.ex. Maskinklippning" /></div>
                     <div className="form-group"><label className="form-label">Beskrivning</label><input type="text" value={newServiceDesc} onChange={e => setNewServiceDesc(e.target.value)} className="form-input" placeholder="Valfri beskrivning" /></div>
-                    <div className="form-group"><label className="form-label">Tid (min)</label><input type="number" required value={newServiceDuration} onChange={e => setNewServiceDuration(Number(e.target.value))} className="form-input" /></div>
-                    <div className="form-group"><label className="form-label">Pris (kr)</label><input type="number" required value={newServicePrice} onChange={e => setNewServicePrice(Number(e.target.value))} className="form-input" /></div>
+                    <div className="form-group"><label className="form-label">Tid (min)</label><input type="number" required value={newServiceDuration} onChange={e => { const val = e.target.value; setNewServiceDuration(val === '' ? '' : Number(val)); }} className="form-input" /></div>
+                    <div className="form-group"><label className="form-label">Pris (kr)</label><input type="number" required value={newServicePrice} onChange={e => { const val = e.target.value; setNewServicePrice(val === '' ? '' : Number(val)); }} className="form-input" /></div>
                     <button type="submit" disabled={savingService} className="btn btn-primary" style={{ width: '100%' }}>{savingService ? 'Sparar...' : 'Spara tjänst'}</button>
                   </form>
                 </div>
@@ -496,7 +506,7 @@ export default function ShopAdminDashboard() {
 
                 <div className="card-premium">
                   <h3>Lägg till ny frisör / personal</h3>
-                  <form onSubmit={handleAddBarber} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <form onSubmit={handleAddBarber} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="form-group"><label className="form-label">Förnamn</label><input type="text" required value={newBarberFirstName} onChange={e => setNewBarberFirstName(e.target.value)} className="form-input" placeholder="t.ex. Johan" /></div>
                     <div className="form-group"><label className="form-label">Efternamn</label><input type="text" required value={newBarberLastName} onChange={e => setNewBarberLastName(e.target.value)} className="form-input" placeholder="t.ex. Andersson" /></div>
                     <div className="form-group"><label className="form-label">E-postadress</label><input type="email" required value={newBarberEmail} onChange={e => setNewBarberEmail(e.target.value)} className="form-input" placeholder="johan@salong.se" /></div>
@@ -570,12 +580,12 @@ export default function ShopAdminDashboard() {
               <form onSubmit={e => { e.preventDefault(); handleSaveSettings(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
                 <div className="form-group">
                   <label className="form-label">Avbokningsfönster (timmar innan)</label>
-                  <input type="number" value={cancellationHours} onChange={e => setCancellationHours(Number(e.target.value))} className="form-input" />
+                  <input type="number" value={cancellationHours} onChange={e => { const val = e.target.value; setCancellationHours(val === '' ? '' : Number(val)); }} className="form-input" />
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Kunder kan inte avboka online senare än detta.</p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Deposition vid onlinebokning (%)</label>
-                  <input type="number" value={depositPct} onChange={e => setDepositPct(Number(e.target.value))} className="form-input" />
+                  <input type="number" value={depositPct} onChange={e => { const val = e.target.value; setDepositPct(val === '' ? '' : Number(val)); }} className="form-input" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Öppettider (Mån-Fre)</label>
@@ -598,7 +608,7 @@ export default function ShopAdminDashboard() {
         .admin-dashboard-wrapper { display: flex; min-height: calc(100vh - 160px); }
         .admin-sidebar { width: 260px; background-color: var(--secondary-hover); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); flex-shrink: 0; min-height: calc(100vh - 160px); }
         .sidebar-brand { padding: 24px; font-family: var(--font-primary); font-size: 1.3rem; font-weight: 800; color: #f8fafc; border-bottom: 1px solid #1e293b; }
-        .sidebar-brand span { color: var(--primary); }
+        .sidebar-brand span { color: var(--accent); }
         .sidebar-nav { display: flex; flex-direction: column; padding: 16px 0; }
         .sidebar-nav button { background: transparent; color: #94a3b8; padding: 14px 24px; text-align: left; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); font-size: 0.95rem; }
         .sidebar-nav button:hover { color: #f8fafc; background-color: #1e293b; }
@@ -659,6 +669,10 @@ export default function ShopAdminDashboard() {
           background-color: rgba(239, 68, 68, 0.08);
           border: 1px solid rgba(239, 68, 68, 0.2);
           color: #f87171;
+        }
+        .form-group {
+          margin-bottom: 0px !important;
+          gap: 6px !important;
         }
       `}</style>
     </div>
