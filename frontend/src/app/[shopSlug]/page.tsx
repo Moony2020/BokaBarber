@@ -54,6 +54,8 @@ export default function ShopBookingPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [customerForm, setCustomerForm] = useState({ firstName: '', lastName: '', email: '', phoneNumber: '' });
+  const [upcomingTimes, setUpcomingTimes] = useState<{ label: string; date: string; time: string }[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
 
   // Load shop data
   useEffect(() => {
@@ -86,8 +88,85 @@ export default function ShopBookingPage() {
     setSelectedDate(tomorrow.toISOString().split('T')[0]);
   }, []);
 
+  // Fetch upcoming quick slots for today and tomorrow dynamically
+  useEffect(() => {
+    const fetchUpcomingTimes = async () => {
+      if (!shop || services.length === 0 || barbers.length === 0) return;
+      setUpcomingLoading(true);
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      
+      const defaultService = services[0];
+      const defaultBarber = barbers[0];
+      
+      const timesList: { label: string; date: string; time: string }[] = [];
+      
+      try {
+        // Fetch today
+        const resToday = await api.getAvailableSlots(shop._id, defaultBarber._id, todayStr, defaultService._id);
+        if (resToday.ok) {
+          const slotsToday = (resToday.data as { slots: string[] }).slots || [];
+          const now = new Date();
+          const currentHour = now.getHours();
+          const currentMin = now.getMinutes();
+          
+          const futureSlots = slotsToday.filter(s => {
+            const [h, m] = s.split(':').map(Number);
+            return h > currentHour || (h === currentHour && m > currentMin);
+          });
+          
+          if (futureSlots.length > 0) {
+            timesList.push({
+              label: `Idag, ${futureSlots[0]}`,
+              date: todayStr,
+              time: futureSlots[0]
+            });
+          }
+        }
+        
+        // Fetch tomorrow
+        const resTomorrow = await api.getAvailableSlots(shop._id, defaultBarber._id, tomorrowStr, defaultService._id);
+        if (resTomorrow.ok) {
+          const slotsTomorrow = (resTomorrow.data as { slots: string[] }).slots || [];
+          if (slotsTomorrow.length > 0) {
+            timesList.push({
+              label: `Imorgon, ${slotsTomorrow[0]}`,
+              date: tomorrowStr,
+              time: slotsTomorrow[0]
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch upcoming quick slots', err);
+      } finally {
+        setUpcomingTimes(timesList);
+        setUpcomingLoading(false);
+      }
+    };
+    
+    if (shop && services.length > 0 && barbers.length > 0) {
+      fetchUpcomingTimes();
+    }
+  }, [shop, services, barbers]);
+
+  const handleQuickBook = (date: string, time: string) => {
+    if (services.length === 0 || barbers.length === 0) return;
+    const defaultService = services[0];
+    const defaultBarber = barbers[0];
+    
+    setSelectedService(defaultService);
+    setSelectedBarber(defaultBarber);
+    setSelectedDate(date);
+    setSelectedTime(time);
+    setStep(4); // Move directly to step 4 (Dina uppgifter)!
+  };
+
   // Load available slots when barber + date + service change
   const loadSlots = useCallback(async () => {
+    if (step !== 3) return;
     if (!shop || !selectedBarber || !selectedDate || !selectedService) return;
     setSlotsLoading(true);
     setSelectedTime('');
@@ -106,7 +185,7 @@ export default function ShopBookingPage() {
     } finally {
       setSlotsLoading(false);
     }
-  }, [shop, selectedBarber, selectedDate, selectedService]);
+  }, [shop, selectedBarber, selectedDate, selectedService, step]);
 
   useEffect(() => {
     loadSlots();
@@ -545,16 +624,25 @@ export default function ShopBookingPage() {
 
             <div className="sidebar-card regular-sidebar-card">
               <h4>Kommande tider</h4>
-              <div className="upcoming-times-list">
-                <div className="upcoming-time-item">
-                  <span>Idag, 14:30</span>
-                  <span className="upcoming-arrow">→</span>
+              {upcomingLoading && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Söker tider...</div>}
+              {!upcomingLoading && upcomingTimes.length === 0 && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '12px' }}>Inga lediga tider idag eller imorgon.</div>
+              )}
+              {!upcomingLoading && upcomingTimes.length > 0 && (
+                <div className="upcoming-times-list">
+                  {upcomingTimes.map((item, idx) => (
+                    <button
+                      key={idx}
+                      className="upcoming-time-item"
+                      onClick={() => handleQuickBook(item.date, item.time)}
+                      style={{ width: '100%', outline: 'none', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span>{item.label}</span>
+                      <span className="upcoming-arrow">→</span>
+                    </button>
+                  ))}
                 </div>
-                <div className="upcoming-time-item">
-                  <span>Imorgon, 10:00</span>
-                  <span className="upcoming-arrow">→</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -966,19 +1054,24 @@ export default function ShopBookingPage() {
           max-width: 520px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 12px;
+        }
+
+        .customer-details-form .form-group {
+          margin-bottom: 0px;
+          gap: 6px;
         }
 
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 12px;
         }
 
         .wizard-actions {
           display: flex;
           gap: 16px;
-          margin-top: 40px;
+          margin-top: 20px;
         }
 
         /* CONFIRMATION INVOICE */
@@ -1126,6 +1219,14 @@ export default function ShopBookingPage() {
           font-size: 0.85rem;
           font-weight: 700;
           color: var(--text-primary);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+        .upcoming-time-item:hover {
+          background-color: var(--primary-light) !important;
+          border-color: var(--accent) !important;
+          color: var(--primary) !important;
+          transform: translateY(-1px);
         }
 
         .upcoming-arrow {

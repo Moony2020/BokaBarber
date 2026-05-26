@@ -85,6 +85,7 @@ export default function ShopAdminDashboard() {
   const [shopName, setShopName] = useState('');
   const [shopSlug, setShopSlug] = useState('');
   const [subscription, setSubscription] = useState<{ status: string; trialEndsAt: string; gracePeriodEndsAt?: string } | null>(null);
+  const [newBookingNotifications, setNewBookingNotifications] = useState<string[]>([]);
 
   // Barber form
   const [newBarberFirstName, setNewBarberFirstName] = useState('');
@@ -183,6 +184,44 @@ export default function ShopAdminDashboard() {
     } catch { setError('Kunde inte hämta inställningar.'); }
     finally { setLoading(false); }
   }, [shopId]);
+
+  // Silently check for new bookings in the background
+  const pollDashboardSilently = useCallback(async (currentBookings: BookingItem[]) => {
+    try {
+      const bk = await api.adminBookings(shopId);
+      if (bk.ok) {
+        const freshBookings = (bk.data as { bookings: BookingItem[] }).bookings || [];
+        
+        // Find if there are any new bookings
+        const existingIds = new Set(currentBookings.map(b => b._id));
+        const newArrivals = freshBookings.filter(b => !existingIds.has(b._id) && b.status === 'confirmed');
+        
+        if (newArrivals.length > 0) {
+          const newNames = newArrivals.map(b => `${b.customerName} (${b.serviceName})`);
+          setNewBookingNotifications(prev => [...prev, ...newNames]);
+          setBookings(freshBookings);
+          
+          const res = await api.adminDashboard(shopId);
+          if (res.ok) {
+            setStats(res.data as DashboardStats);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Silent poll failed', err);
+    }
+  }, [shopId]);
+
+  // Set up polling interval for real-time updates
+  useEffect(() => {
+    if (activeTab !== 'oversikt' && activeTab !== 'kalender') return;
+    
+    const interval = setInterval(() => {
+      pollDashboardSilently(bookings);
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [activeTab, bookings, pollDashboardSilently]);
 
   useEffect(() => {
     if (activeTab === 'oversikt' || activeTab === 'kalender') loadDashboard();
@@ -305,6 +344,17 @@ export default function ShopAdminDashboard() {
         <header className="admin-top-bar">
           <h2>{activeTab === 'oversikt' ? 'Översikt' : activeTab === 'kalender' ? 'Alla Bokningar' : activeTab === 'tjanster' ? 'Tjänster' : activeTab === 'personal' ? 'Personal' : activeTab === 'kunder' ? 'Kundregister' : 'Inställningar'}</h2>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {newBookingNotifications.length > 0 && (
+              <div
+                className="admin-bell-badge"
+                onClick={() => { setActiveTab('oversikt'); setNewBookingNotifications([]); }}
+                title={`${newBookingNotifications.length} nya bokningar! Klicka för att rensa.`}
+                style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', fontSize: '1.1rem', transition: 'all var(--transition-fast)' }}
+              >
+                🔔
+                <span className="bell-red-dot"></span>
+              </div>
+            )}
             {shopSlug && (
               <a
                 href={`/${shopSlug}`}
@@ -320,7 +370,27 @@ export default function ShopAdminDashboard() {
           </div>
         </header>
 
-        <div className="admin-content-area">
+        <div className="admin-content-area" style={{ position: 'relative' }}>
+          {newBookingNotifications.length > 0 && (
+            <div className="toast-notification-container">
+              {newBookingNotifications.map((notif, idx) => (
+                <div key={idx} className="toast-notification animate-slide-in">
+                  <div className="toast-content">
+                    🔔 <strong>Ny bokning inkommen!</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {notif}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setNewBookingNotifications(prev => prev.filter((_, i) => i !== idx))}
+                    className="toast-close"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {error && <div className="error-alert">⚠️ {error}</div>}
           {loading && <div className="loading-indicator">⏳ Laddar data från databasen...</div>}
 
@@ -673,6 +743,74 @@ export default function ShopAdminDashboard() {
         .form-group {
           margin-bottom: 0px !important;
           gap: 6px !important;
+        }
+        .toast-notification-container {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-width: 360px;
+          width: 100%;
+        }
+        .toast-notification {
+          background-color: #ffffff;
+          border: 1px solid var(--accent);
+          border-left: 4px solid var(--accent);
+          border-radius: var(--radius-md);
+          padding: 16px;
+          box-shadow: var(--shadow-lg);
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .toast-content {
+          flex: 1;
+          text-align: left;
+        }
+        .toast-close {
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          font-size: 1.5rem;
+          line-height: 1;
+          cursor: pointer;
+          padding: 0;
+          margin-top: -4px;
+          transition: color var(--transition-fast);
+        }
+        .toast-close:hover {
+          color: var(--color-danger);
+        }
+        .bell-red-dot {
+          position: absolute;
+          top: 2px;
+          right: 2px;
+          width: 10px;
+          height: 10px;
+          background-color: var(--color-danger);
+          border-radius: 50%;
+          border: 2px solid #ffffff;
+          animation: pulse 1.5s infinite;
+        }
+        .admin-bell-badge:hover {
+          transform: scale(1.05);
+          background-color: var(--primary-light) !important;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(120%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in {
+          animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>

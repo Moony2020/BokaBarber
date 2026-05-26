@@ -12,7 +12,8 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
   const config: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json', ...headers },
-    credentials: 'include' as RequestCredentials
+    credentials: 'include' as RequestCredentials,
+    cache: 'no-store'
   };
 
   if (body && method !== 'GET') {

@@ -537,7 +537,14 @@ app.get('/api/v1/admin/:shopId/dashboard', authenticateUser, requireRoles('shop_
 
     const [todayBookings, monthBookings, totalCustomers, activeBarbers, sub] = await Promise.all([
       Booking.countDocuments({ shopId, startTime: { $gte: today, $lt: tomorrow } }),
-      Booking.find({ shopId, createdAt: { $gte: monthStart }, status: { $in: ['confirmed', 'paid', 'completed'] } }).lean(),
+      Booking.find({
+        shopId,
+        createdAt: { $gte: monthStart },
+        $or: [
+          { status: { $in: ['paid', 'completed'] } },
+          { paymentStatus: 'paid' }
+        ]
+      }).lean(),
       CustomerProfile.countDocuments({ shopId }),
       BarberProfile.countDocuments({ shopId, isActive: true }),
       Subscription.findOne({ shopId })
