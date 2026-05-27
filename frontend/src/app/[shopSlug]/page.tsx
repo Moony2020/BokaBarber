@@ -42,6 +42,7 @@ export default function ShopBookingPage() {
 
   // Real data from backend
   const [shop, setShop] = useState<ShopData | null>(null);
+  const [settings, setSettings] = useState<{ acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[] } | null>(null);
   const [services, setServices] = useState<ServiceData[]>([]);
   const [barbers, setBarbers] = useState<BarberData[]>([]);
   const [slots, setSlots] = useState<string[]>([]);
@@ -64,8 +65,9 @@ export default function ShopBookingPage() {
       try {
         const res = await api.getShopBySlug(slug);
         if (res.ok) {
-          const d = res.data as { shop: ShopData; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
+          const d = res.data as { shop: ShopData; settings?: any; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
           setShop(d.shop);
+          setSettings(d.settings || null);
           setServices(d.services || []);
           setBarbers(d.barbers || []);
           setStatusFlag(d.statusFlag || 'ready');
@@ -585,7 +587,30 @@ export default function ShopBookingPage() {
                     <span>Totalt att betala</span>
                     <strong className="text-gold-price">{selectedService?.price} kr</strong>
                   </div>
-                  <p className="invoice-note">💰 Betalning sker tryggt på plats efter din behandling.</p>
+                  <p className="invoice-note">
+                    💰 Betalning sker tryggt på plats i salongen.
+                    {(() => {
+                      const methods = settings?.acceptedPaymentMethods;
+                      if (!methods || methods.length === 0) return null;
+                      return (
+                        <span style={{ display: 'block', marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          <strong>Denna salong accepterar:</strong>{' '}
+                          {methods.map((m, idx) => {
+                            const labels = { swish: 'Swish 📱', card: 'Kort 💳', cash: 'Kontant 💵' };
+                            const label = labels[m];
+                            const isLast = idx === methods.length - 1;
+                            const isSecondToLast = idx === methods.length - 2;
+                            return (
+                              <span key={m}>
+                                {label}
+                                {isLast ? '' : isSecondToLast ? ' och ' : ', '}
+                              </span>
+                            );
+                          })}
+                        </span>
+                      );
+                    })()}
+                  </p>
                 </div>
 
                 <div className="wizard-actions" style={{ marginTop: '32px' }}>

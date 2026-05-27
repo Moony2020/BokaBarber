@@ -77,9 +77,20 @@ export default function ShopAdminDashboard() {
   // Settings form
   const [cancellationHours, setCancellationHours] = useState<number | ''>(24);
   const [depositPct, setDepositPct] = useState<number | ''>(0);
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<('swish' | 'card' | 'cash')[]>(['swish', 'card']);
   const [openTime, setOpenTime] = useState('09:00');
   const [closeTime, setCloseTime] = useState('18:00');
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   // Shop details
   const [shopName, setShopName] = useState('');
@@ -173,10 +184,15 @@ export default function ShopAdminDashboard() {
     try {
       const res = await api.adminGetSettings(shopId);
       if (res.ok) {
-        const d = res.data as { settings: { cancellationWindowHours: number; depositPercentage: number; openingHours: { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string }[] } };
+        const d = res.data as { settings: { cancellationWindowHours: number; depositPercentage: number; acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[]; openingHours: { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string }[] } };
         if (d.settings) {
           setCancellationHours(d.settings.cancellationWindowHours);
           setDepositPct(d.settings.depositPercentage);
+          if (d.settings.acceptedPaymentMethods) {
+            setAcceptedPaymentMethods(d.settings.acceptedPaymentMethods);
+          } else {
+            setAcceptedPaymentMethods(['swish', 'card']);
+          }
           const mon = d.settings.openingHours?.find(h => h.dayOfWeek === 1);
           if (mon) { setOpenTime(mon.openTime); setCloseTime(mon.closeTime); }
         }
@@ -266,10 +282,11 @@ export default function ShopAdminDashboard() {
     setSavingSettings(true);
     await api.adminUpdateSettings(shopId, {
       cancellationWindowHours: cancellationHours === '' ? 0 : Number(cancellationHours),
-      depositPercentage: depositPct === '' ? 0 : Number(depositPct)
+      depositPercentage: depositPct === '' ? 0 : Number(depositPct),
+      acceptedPaymentMethods
     });
     setSavingSettings(false);
-    alert('Inställningar sparade!');
+    showToast('Inställningar sparade!', 'success');
   };
 
   const handleAddBarber = async (e: React.FormEvent) => {
@@ -320,6 +337,37 @@ export default function ShopAdminDashboard() {
 
   return (
     <div className="admin-dashboard-wrapper animate-fade-in">
+      {/* Global Viewport-Safe Toast Notifications Overlay */}
+      {(newBookingNotifications.length > 0 || toast) && (
+        <div className="toast-notification-container">
+          {toast && (
+            <div className={`toast-notification animate-slide-in toast-${toast.type}`} style={{ borderLeft: `4px solid ${toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#3b82f6'}` }}>
+              <div className="toast-content" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+                <strong style={{ color: '#1e293b' }}>{toast.message}</strong>
+              </div>
+              <button onClick={() => setToast(null)} className="toast-close">×</button>
+            </div>
+          )}
+          {newBookingNotifications.map((notif, idx) => (
+            <div key={idx} className="toast-notification animate-slide-in">
+              <div className="toast-content">
+                🔔 <strong>Ny bokning inkommen!</strong>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {notif}
+                </p>
+              </div>
+              <button
+                onClick={() => setNewBookingNotifications(prev => prev.filter((_, i) => i !== idx))}
+                className="toast-close"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="admin-sidebar">
         <div className="sidebar-brand">
           💈 <span>{shopName || 'BokaBarber'}</span>
@@ -371,26 +419,6 @@ export default function ShopAdminDashboard() {
         </header>
 
         <div className="admin-content-area" style={{ position: 'relative' }}>
-          {newBookingNotifications.length > 0 && (
-            <div className="toast-notification-container">
-              {newBookingNotifications.map((notif, idx) => (
-                <div key={idx} className="toast-notification animate-slide-in">
-                  <div className="toast-content">
-                    🔔 <strong>Ny bokning inkommen!</strong>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {notif}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setNewBookingNotifications(prev => prev.filter((_, i) => i !== idx))}
-                    className="toast-close"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
           {error && <div className="error-alert">⚠️ {error}</div>}
           {loading && <div className="loading-indicator">⏳ Laddar data från databasen...</div>}
 
@@ -403,30 +431,45 @@ export default function ShopAdminDashboard() {
                 if (days > 0) {
                   return (
                     <div className="alert-banner info-alert">
-                      ℹ️ Du har <strong>{days}</strong> {days === 1 ? 'dag' : 'dagar'} kvar av din gratis provperiod.
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>ℹ️</span>
+                        <span>Du har <strong>{days}</strong> {days === 1 ? 'dag' : 'dagar'} kvar av din gratis provperiod.</span>
+                      </span>
                     </div>
                   );
                 } else {
                   return (
                     <div className="alert-banner danger-alert">
-                      ⚠️ Din provperiod har gått ut. Välj en plan för att aktivera bokningar.
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⚠️</span>
+                        <span>Din provperiod har gått ut. Välj en plan för att aktivera bokningar.</span>
+                      </span>
                     </div>
                   );
                 }
               })()}
               {subscription.status === 'suspended' && (
                 <div className="alert-banner danger-alert">
-                  ⚠️ Din salong är pausad. Uppdatera betalningen för att aktivera bokningar igen.
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span>
+                    <span>Din salong är pausad. Uppdatera betalningen för att aktivera bokningar igen.</span>
+                  </span>
                 </div>
               )}
               {subscription.status === 'cancelled' && (
                 <div className="alert-banner danger-alert">
-                  ⚠️ Salongens abonnemang är uppsagt. Välj en plan för att starta om.
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span>
+                    <span>Salongens abonnemang är uppsagt. Välj en plan för att starta om.</span>
+                  </span>
                 </div>
               )}
               {subscription.status === 'past_due' && (
                 <div className="alert-banner warning-alert">
-                  ⚠️ Betalningen misslyckades. Uppdatera betalningsmetod inom 7 dagar.
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span>
+                    <span>Betalningen misslyckades. Uppdatera betalningsmetod inom 7 dagar.</span>
+                  </span>
                 </div>
               )}
             </div>
@@ -657,6 +700,54 @@ export default function ShopAdminDashboard() {
                   <label className="form-label">Deposition vid onlinebokning (%)</label>
                   <input type="number" value={depositPct} onChange={e => { const val = e.target.value; setDepositPct(val === '' ? '' : Number(val)); }} className="form-input" />
                 </div>
+                 <div className="form-group">
+                  <label className="form-label">Godkända betalningsmetoder i salongen (Betala på plats)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={acceptedPaymentMethods.includes('swish')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'swish']);
+                          } else {
+                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'swish'));
+                          }
+                        }}
+                      />
+                      📱 Swish
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={acceptedPaymentMethods.includes('card')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'card']);
+                          } else {
+                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'card'));
+                          }
+                        }}
+                      />
+                      💳 Kort i salongen (Kortterminal)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={acceptedPaymentMethods.includes('cash')}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'cash']);
+                          } else {
+                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'cash'));
+                          }
+                        }}
+                      />
+                      💵 Kontant
+                    </label>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Välj de betalningssätt som visas för kunder på bokningsbekräftelsen.</p>
+                </div>
                 <div className="form-group">
                   <label className="form-label">Öppettider (Mån-Fre)</label>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -688,13 +779,13 @@ export default function ShopAdminDashboard() {
         .admin-top-bar h2 { font-size: 1.5rem; }
         .admin-shop-badge { background-color: var(--bg-tertiary); padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
         .admin-content-area { padding: 32px; flex: 1; overflow-y: auto; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
-        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-        .kpi-val { font-size: 2.2rem; font-weight: 800; color: var(--primary); }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: none; letter-spacing: 0.3px; margin-bottom: 8px; }
+        .kpi-val { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
         .table-responsive { width: 100%; overflow-x: auto; }
-        .admin-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
-        .admin-table th { background-color: var(--bg-tertiary); padding: 12px 16px; font-weight: 700; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); }
-        .admin-table td { padding: 16px; border-bottom: 1px solid var(--border-color); }
+        .admin-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; min-width: 750px; }
+        .admin-table th { background-color: var(--bg-tertiary); padding: 12px 16px; font-weight: 700; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); white-space: nowrap; }
+        .admin-table td { padding: 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
         .status-badge { padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; }
         .status-badge.confirmed { background-color: #d1fae5; color: #065f46; }
         .status-badge.paid { background-color: #dbeafe; color: #1e40af; }
@@ -709,17 +800,24 @@ export default function ShopAdminDashboard() {
         @media (min-width: 992px) { .two-col-layout { grid-template-columns: 1.2fr 0.8fr; } }
         @media (max-width: 768px) {
           .admin-dashboard-wrapper { flex-direction: column; }
-          .admin-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
-          .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 8px 16px; }
-          .sidebar-nav button { padding: 10px 16px; white-space: nowrap; }
+          .admin-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); min-height: auto; }
+          .sidebar-brand { padding: 16px 20px; border-bottom: 1px solid var(--border-color); }
+          .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 4px 8px; gap: 2px; }
+          .sidebar-nav button { padding: 10px 16px; white-space: nowrap; font-size: 0.85rem; border-left: none !important; border-bottom: 3px solid transparent; }
+          .sidebar-nav button.active { border-bottom: 3px solid var(--primary); background-color: var(--secondary) !important; }
+          .admin-top-bar { padding: 16px 20px; flex-direction: column; gap: 12px; align-items: flex-start; }
+          .admin-top-bar h2 { font-size: 1.3rem; }
           .admin-content-area { padding: 16px; }
+          .kpi-grid { gap: 12px; }
+          .kpi-card { padding: 16px !important; }
+          .kpi-val { font-size: 1.4rem !important; }
         }
         .alert-banner {
-          padding: 14px 20px;
+          padding: 12px 16px;
           border-radius: var(--radius-md);
-          font-weight: 600;
+          font-weight: 500;
           margin-bottom: 24px;
-          font-size: 0.95rem;
+          font-size: 0.88rem;
           display: flex;
           align-items: center;
           gap: 10px;

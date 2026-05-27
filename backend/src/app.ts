@@ -1,6 +1,9 @@
 import express, { Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import mongoose, { Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -31,11 +34,45 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_stripe_
   apiVersion: '2023-10-16' as any
 });
 
-// Middleware
+// Configure Express trust proxy for Render / behind proxy environments
+app.set('trust proxy', 1);
+
+// Configure CORS first so OPTIONS/Preflight requests succeed immediately
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
+
+// Global Helmet Protection
+app.use(helmet());
+
+// Global Rate Limiter: 100 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { error: 'För många förfrågningar från denna IP-adress, försök igen om 15 minuter.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter Auth Rate Limiter: 5 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'För många inloggningsförsök eller registreringar. Försök igen om 15 minuter.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limiting to all API requests
+app.use('/api', generalLimiter);
+
+// Apply strict rate limiting to auth/sensitive routes
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register-shop', authLimiter);
+
+// Prevent NoSQL query injection
+app.use(mongoSanitize());
 
 // Save raw body for Stripe webhook validation
 app.use(express.json({
@@ -739,6 +776,13 @@ app.get('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_a
   try {
     const settings = await ShopSettings.findOne({ shopId: new Types.ObjectId(req.params.shopId) });
     const shop = await Shop.findById(req.params.shopId);
+    
+    // Safety fallback: if existing shop settings don't have acceptedPaymentMethods yet, set them to default
+    if (settings && (!settings.acceptedPaymentMethods || settings.acceptedPaymentMethods.length === 0)) {
+      settings.acceptedPaymentMethods = ['swish', 'card'];
+      await settings.save();
+    }
+    
     return res.json({ settings, shop });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte hämta inställningar.' });
@@ -747,10 +791,10 @@ app.get('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_a
 
 app.put('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { cancellationWindowHours, allowRescheduling, depositPercentage, paymentMethods, openingHours } = req.body;
+    const { cancellationWindowHours, allowRescheduling, depositPercentage, paymentMethods, acceptedPaymentMethods, openingHours } = req.body;
     const settings = await ShopSettings.findOneAndUpdate(
       { shopId: new Types.ObjectId(req.params.shopId) },
-      { $set: { cancellationWindowHours, allowRescheduling, depositPercentage, paymentMethods, openingHours } },
+      { $set: { cancellationWindowHours, allowRescheduling, depositPercentage, paymentMethods, acceptedPaymentMethods, openingHours } },
       { new: true }
     );
     return res.json({ settings });
@@ -1098,6 +1142,19 @@ app.post('/api/v1/billing/webhook', async (req: any, res: Response) => {
     console.error('❌ Webhook data processing error:', webhookErr);
     return res.status(500).json({ error: 'Internal processing error' });
   }
+});
+
+// Global Production Error Handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled Server Error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Ett oväntat fel uppstod.' 
+    : err.message || 'Internt serverfel.';
+  res.status(status).json({
+    error: message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  });
 });
 
 // ===========================================================================

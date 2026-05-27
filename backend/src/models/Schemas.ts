@@ -84,6 +84,7 @@ export interface IShopSettings extends Document {
   allowRescheduling: boolean;
   depositPercentage: number;
   paymentMethods: ('online' | 'at_shop' | 'deposit')[];
+  acceptedPaymentMethods: ('swish' | 'card' | 'cash')[];
   currency: string;
   openingHours: {
     dayOfWeek: number; // 0 (Sunday) to 6 (Saturday)
@@ -102,6 +103,7 @@ const ShopSettingsSchema = new Schema<IShopSettings>({
   allowRescheduling: { type: Boolean, default: true },
   depositPercentage: { type: Number, default: 0 },
   paymentMethods: [{ type: String, enum: ['online', 'at_shop', 'deposit'], default: ['at_shop'] }],
+  acceptedPaymentMethods: [{ type: String, enum: ['swish', 'card', 'cash'], default: ['swish', 'card'] }],
   currency: { type: String, default: 'SEK' },
   openingHours: [{
     dayOfWeek: { type: Number, required: true },
