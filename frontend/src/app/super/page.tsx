@@ -152,16 +152,15 @@ export default function SuperAdminDashboard() {
 
             return (
               <div className="tab-pane card-premium">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                  <h3 style={{ margin: 0 }}>Registrerade salonger ({filteredShops.length})</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <label htmlFor="status-filter" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Filtrera status:</label>
+                <div className="flex-between-center-wrap-16" >
+                  <h3 className="m-0" >Registrerade salonger ({filteredShops.length})</h3>
+                  <div className="flex-center-gap-12" >
+                    <label htmlFor="status-filter" className="text-label-bold" >Filtrera status:</label>
                     <select
                       id="status-filter"
                       value={statusFilter}
                       onChange={e => setStatusFilter(e.target.value)}
-                      className="form-input"
-                      style={{ padding: '8px 12px', fontSize: '0.85rem', width: '220px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                      className="form-input select-filter" 
                     >
                       <option value="all">Alla</option>
                       <option value="trial">Trial (Provperiod)</option>
@@ -185,12 +184,12 @@ export default function SuperAdminDashboard() {
                           <tr key={s._id}>
                             <td>
                               <strong>{s.name}</strong>
-                              {!s.isReady && <span style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>EJ REDO</span>}
+                              {!s.isReady && <span className="badge-not-ready" >EJ REDO</span>}
                               <br />
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/{s.slug}</span>
+                              <span className="text-xs-muted" >/{s.slug}</span>
                             </td>
                             <td>{s.address?.city || '-'}</td>
-                            <td>{s.ownerName}<br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.ownerEmail}</span></td>
+                            <td>{s.ownerName}<br /><span className="text-xs-muted" >{s.ownerEmail}</span></td>
                             <td><span className="plan-badge">{s.planName}</span></td>
                             <td>
                               <span className={`status-badge ${
@@ -201,7 +200,7 @@ export default function SuperAdminDashboard() {
                             </td>
                             <td>{s.mrr} kr</td>
                             <td>
-                              <button onClick={() => handleToggleShop(s._id, s.isActive)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: s.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                              <button onClick={() => handleToggleShop(s._id, s.isActive)} className={`btn btn-secondary btn-sm ${s.isActive ? 'text-danger' : 'text-success'}`}>
                                 {s.isActive ? 'Stäng av' : 'Aktivera'}
                               </button>
                             </td>
@@ -218,7 +217,7 @@ export default function SuperAdminDashboard() {
           {/* AUDIT LOGS */}
           {activeTab === 'loggar' && !loading && (
             <div className="tab-pane card-premium">
-              <h3 style={{ marginBottom: '24px' }}>Senaste händelser</h3>
+              <h3 className="mb-24" >Senaste händelser</h3>
               {logs.length === 0 ? (
                 <div className="empty-state">Inga loggade händelser ännu.</div>
               ) : (
@@ -229,7 +228,7 @@ export default function SuperAdminDashboard() {
                       {logs.map(l => (
                         <tr key={l._id}>
                           <td>{new Date(l.createdAt).toLocaleString('sv-SE')}</td>
-                          <td><code style={{ backgroundColor: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>{l.action}</code></td>
+                          <td><code className="code-badge" >{l.action}</code></td>
                           <td>{l.userId ? `${l.userId.firstName} ${l.userId.lastName}` : '-'}</td>
                           <td>{l.shopName}</td>
                         </tr>
@@ -244,6 +243,20 @@ export default function SuperAdminDashboard() {
       </div>
 
       <style jsx>{`
+
+        .flex-between-center-wrap-16 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .m-0 { margin: 0; }
+        .flex-center-gap-12 { display: flex; align-items: center; gap: 12px; }
+        .text-label-bold { font-size: 0.9rem; color: var(--text-secondary); font-weight: 600; }
+        .select-filter { padding: 8px 12px; font-size: 0.85rem; width: 220px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-secondary); color: var(--text-secondary); }
+        .badge-not-ready { margin-left: 8px; background-color: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+        .text-xs-muted { font-size: 0.8rem; color: var(--text-muted); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .text-danger { color: var(--color-danger) !important; }
+        .text-success { color: var(--color-success) !important; }
+        .mb-24 { margin-bottom: 24px; }
+        .code-badge { background-color: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px; }
+
         .super-dashboard-wrapper { display: flex; min-height: calc(100vh - 160px); }
         .super-sidebar { width: 260px; background: linear-gradient(180deg, #1a1a2e, #16213e); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid #2a2a4e; flex-shrink: 0; }
         .sidebar-brand { padding: 24px; font-family: var(--font-primary); font-size: 1.3rem; font-weight: 800; color: #f8fafc; border-bottom: 1px solid #2a2a4e; }

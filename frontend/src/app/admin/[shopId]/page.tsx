@@ -341,10 +341,10 @@ export default function ShopAdminDashboard() {
       {(newBookingNotifications.length > 0 || toast) && (
         <div className="toast-notification-container">
           {toast && (
-            <div className={`toast-notification animate-slide-in toast-${toast.type}`} style={{ borderLeft: `4px solid ${toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#3b82f6'}` }}>
-              <div className="toast-content" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
-                <strong style={{ color: '#1e293b' }}>{toast.message}</strong>
+            <div className={`toast-notification animate-slide-in toast-${toast.type} toast-border-${toast.type}`}>
+              <div className="toast-content flex-center-gap-8" >
+                <span className="text-1-2rem" >{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+                <strong className="text-slate-800" >{toast.message}</strong>
               </div>
               <button onClick={() => setToast(null)} className="toast-close">×</button>
             </div>
@@ -353,7 +353,7 @@ export default function ShopAdminDashboard() {
             <div key={idx} className="toast-notification animate-slide-in">
               <div className="toast-content">
                 🔔 <strong>Ny bokning inkommen!</strong>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                <p className="toast-desc" >
                   {notif}
                 </p>
               </div>
@@ -391,13 +391,12 @@ export default function ShopAdminDashboard() {
       <div className="admin-main-panel">
         <header className="admin-top-bar">
           <h2>{activeTab === 'oversikt' ? 'Översikt' : activeTab === 'kalender' ? 'Alla Bokningar' : activeTab === 'tjanster' ? 'Tjänster' : activeTab === 'personal' ? 'Personal' : activeTab === 'kunder' ? 'Kundregister' : 'Inställningar'}</h2>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="flex-center-gap-12" >
             {newBookingNotifications.length > 0 && (
               <div
-                className="admin-bell-badge"
+                className="admin-bell-badge bell-icon-wrapper"
                 onClick={() => { setActiveTab('oversikt'); setNewBookingNotifications([]); }}
                 title={`${newBookingNotifications.length} nya bokningar! Klicka för att rensa.`}
-                style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', fontSize: '1.1rem', transition: 'all var(--transition-fast)' }}
               >
                 🔔
                 <span className="bell-red-dot"></span>
@@ -408,8 +407,7 @@ export default function ShopAdminDashboard() {
                 href={`/${shopSlug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary"
-                style={{ padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--primary)', color: 'white', fontWeight: 600, textDecoration: 'none' }}
+                className="btn btn-secondary nav-btn" 
               >
                 🌐 Visa bokningssida
               </a>
@@ -418,7 +416,7 @@ export default function ShopAdminDashboard() {
           </div>
         </header>
 
-        <div className="admin-content-area" style={{ position: 'relative' }}>
+        <div className="admin-content-area position-relative" >
           {error && <div className="error-alert">⚠️ {error}</div>}
           {loading && <div className="loading-indicator">⏳ Laddar data från databasen...</div>}
 
@@ -431,7 +429,7 @@ export default function ShopAdminDashboard() {
                 if (days > 0) {
                   return (
                     <div className="alert-banner info-alert">
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="flex-center-gap-8" >
                         <span>ℹ️</span>
                         <span>Du har <strong>{days}</strong> {days === 1 ? 'dag' : 'dagar'} kvar av din gratis provperiod.</span>
                       </span>
@@ -440,7 +438,7 @@ export default function ShopAdminDashboard() {
                 } else {
                   return (
                     <div className="alert-banner danger-alert">
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="flex-center-gap-8" >
                         <span>⚠️</span>
                         <span>Din provperiod har gått ut. Välj en plan för att aktivera bokningar.</span>
                       </span>
@@ -450,7 +448,7 @@ export default function ShopAdminDashboard() {
               })()}
               {subscription.status === 'suspended' && (
                 <div className="alert-banner danger-alert">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="flex-center-gap-8" >
                     <span>⚠️</span>
                     <span>Din salong är pausad. Uppdatera betalningen för att aktivera bokningar igen.</span>
                   </span>
@@ -458,7 +456,7 @@ export default function ShopAdminDashboard() {
               )}
               {subscription.status === 'cancelled' && (
                 <div className="alert-banner danger-alert">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="flex-center-gap-8" >
                     <span>⚠️</span>
                     <span>Salongens abonnemang är uppsagt. Välj en plan för att starta om.</span>
                   </span>
@@ -466,7 +464,7 @@ export default function ShopAdminDashboard() {
               )}
               {subscription.status === 'past_due' && (
                 <div className="alert-banner warning-alert">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="flex-center-gap-8" >
                     <span>⚠️</span>
                     <span>Betalningen misslyckades. Uppdatera betalningsmetod inom 7 dagar.</span>
                   </span>
@@ -485,8 +483,8 @@ export default function ShopAdminDashboard() {
                 <div className="kpi-card card-premium"><h4>Aktiva frisörer</h4><div className="kpi-val">{stats.activeBarbers}</div></div>
               </div>
 
-              <div className="card-premium" style={{ marginTop: '32px' }}>
-                <h3 style={{ marginBottom: '16px' }}>Senaste bokningar</h3>
+              <div className="card-premium mt-32" >
+                <h3 className="mb-16" >Senaste bokningar</h3>
                 {bookings.length === 0 ? (
                   <div className="empty-state">📭 Inga bokningar hittades ännu. När kunder bokar tider visas de här.</div>
                 ) : (
@@ -504,8 +502,8 @@ export default function ShopAdminDashboard() {
                             <td><span className={`status-badge ${b.status}`}>{statusLabel(b.status)}</span></td>
                             <td>
                               <div className="table-action-btns">
-                                {b.status === 'confirmed' && <button onClick={() => handleUpdateStatus(b._id, 'completed')} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Slutförd</button>}
-                                {(b.status === 'confirmed' || b.status === 'paid') && <button onClick={() => handleUpdateStatus(b._id, 'no_show')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--color-danger)' }}>Utebliven</button>}
+                                {b.status === 'confirmed' && <button onClick={() => handleUpdateStatus(b._id, 'completed')} className="btn btn-primary btn-sm" >Slutförd</button>}
+                                {(b.status === 'confirmed' || b.status === 'paid') && <button onClick={() => handleUpdateStatus(b._id, 'no_show')} className="btn btn-secondary btn-sm text-danger" >Utebliven</button>}
                               </div>
                             </td>
                           </tr>
@@ -521,7 +519,7 @@ export default function ShopAdminDashboard() {
           {/* BOOKINGS LIST */}
           {activeTab === 'kalender' && !loading && (
             <div className="tab-pane card-premium">
-              <h3 style={{ marginBottom: '24px' }}>Alla bokningar ({bookings.length} totalt)</h3>
+              <h3 className="mb-24" >Alla bokningar ({bookings.length} totalt)</h3>
               {bookings.length === 0 ? (
                 <div className="empty-state">📭 Inga bokningar registrerade ännu.</div>
               ) : (
@@ -554,17 +552,17 @@ export default function ShopAdminDashboard() {
                 <div className="card-premium">
                   <h3>Aktiva tjänster ({services.length})</h3>
                   {services.length === 0 ? (
-                    <div className="empty-state" style={{ marginTop: '16px' }}>Inga tjänster skapade ännu. Lägg till din första tjänst till höger →</div>
+                    <div className="empty-state mt-16" >Inga tjänster skapade ännu. Lägg till din första tjänst till höger →</div>
                   ) : (
-                    <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="mt-20 flex-col-gap-12" >
                       {services.map(s => (
-                        <div key={s._id} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: s.isActive ? 1 : 0.5 }}>
+                        <div key={s._id} className={`service-item-box ${s.isActive ? '' : 'opacity-50'}`}>
                           <div>
                             <strong>{s.name}</strong>
-                            {s.description && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.description}</p>}
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>⏳ {s.durationMinutes} min | 💵 {s.price} kr</p>
+                            {s.description && <p className="text-sm-secondary" >{s.description}</p>}
+                            <p className="text-sm-muted" >⏳ {s.durationMinutes} min | 💵 {s.price} kr</p>
                           </div>
-                          <button onClick={() => handleToggleService(s._id)} className={`btn ${s.isActive ? 'btn-secondary' : 'btn-primary'}`} style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+                          <button onClick={() => handleToggleService(s._id)} className={`btn ${s.isActive ? 'btn-secondary' : 'btn-primary'} btn-md`} >
                             {s.isActive ? 'Inaktivera' : 'Aktivera'}
                           </button>
                         </div>
@@ -575,12 +573,57 @@ export default function ShopAdminDashboard() {
 
                 <div className="card-premium">
                   <h3>Lägg till ny tjänst</h3>
-                  <form onSubmit={handleAddService} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="form-group"><label className="form-label">Namn</label><input type="text" required value={newServiceName} onChange={e => setNewServiceName(e.target.value)} className="form-input" placeholder="t.ex. Maskinklippning" /></div>
-                    <div className="form-group"><label className="form-label">Beskrivning</label><input type="text" value={newServiceDesc} onChange={e => setNewServiceDesc(e.target.value)} className="form-input" placeholder="Valfri beskrivning" /></div>
-                    <div className="form-group"><label className="form-label">Tid (min)</label><input type="number" required value={newServiceDuration} onChange={e => { const val = e.target.value; setNewServiceDuration(val === '' ? '' : Number(val)); }} className="form-input" /></div>
-                    <div className="form-group"><label className="form-label">Pris (kr)</label><input type="number" required value={newServicePrice} onChange={e => { const val = e.target.value; setNewServicePrice(val === '' ? '' : Number(val)); }} className="form-input" /></div>
-                    <button type="submit" disabled={savingService} className="btn btn-primary" style={{ width: '100%' }}>{savingService ? 'Sparar...' : 'Spara tjänst'}</button>
+                  <form onSubmit={handleAddService} className="admin-form-container">
+                    <div className="form-group">
+                      <label htmlFor="serviceName" className="form-label">Namn</label>
+                      <input
+                        id="serviceName"
+                        type="text"
+                        required
+                        value={newServiceName}
+                        onChange={e => setNewServiceName(e.target.value)}
+                        className="form-input"
+                        placeholder="t.ex. Maskinklippning"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="serviceDesc" className="form-label">Beskrivning</label>
+                      <input
+                        id="serviceDesc"
+                        type="text"
+                        value={newServiceDesc}
+                        onChange={e => setNewServiceDesc(e.target.value)}
+                        className="form-input"
+                        placeholder="Valfri beskrivning"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="serviceDuration" className="form-label">Tid (min)</label>
+                      <input
+                        id="serviceDuration"
+                        type="number"
+                        required
+                        value={newServiceDuration}
+                        onChange={e => { const val = e.target.value; setNewServiceDuration(val === '' ? '' : Number(val)); }}
+                        className="form-input"
+                        placeholder="30"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="servicePrice" className="form-label">Pris (kr)</label>
+                      <input
+                        id="servicePrice"
+                        type="number"
+                        required
+                        value={newServicePrice}
+                        onChange={e => { const val = e.target.value; setNewServicePrice(val === '' ? '' : Number(val)); }}
+                        className="form-input"
+                        placeholder="400"
+                      />
+                    </div>
+                    <button type="submit" disabled={savingService} className="btn btn-primary w-full">
+                      {savingService ? 'Sparar...' : 'Spara tjänst'}
+                    </button>
                   </form>
                 </div>
               </div>
@@ -594,21 +637,21 @@ export default function ShopAdminDashboard() {
                 <div className="card-premium">
                   <h3>Frisörer & Personal ({barbers.length})</h3>
                   {barbers.length === 0 ? (
-                    <div className="empty-state" style={{ marginTop: '16px' }}>Inga frisörer registrerade ännu. Lägg till din första frisör till höger →</div>
+                    <div className="empty-state mt-16" >Inga frisörer registrerade ännu. Lägg till din första frisör till höger →</div>
                   ) : (
-                    <div className="grid-responsive" style={{ marginTop: '24px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                    <div className="grid-responsive staff-grid" >
                       {barbers.map(b => (
-                        <div key={b._id} className="card-premium" style={{ textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>💈</div>
+                        <div key={b._id} className="card-premium text-center staff-card" >
+                          <div className="text-3xl-mb-12" >💈</div>
                           <h4>{b.name}</h4>
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>{b.email}</p>
-                          {b.bio && <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{b.bio}</p>}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                          <p className="text-sm-muted mb-12">{b.email}</p>
+                          {b.bio && <p className="text-sm-secondary mb-12" >{b.bio}</p>}
+                          <div className="flex-wrap-center-gap-6" >
                             {b.services.map(s => (
-                              <span key={s} style={{ backgroundColor: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600 }}>{s}</span>
+                              <span key={s} className="service-pill" >{s}</span>
                             ))}
                           </div>
-                          <span className={`status-badge ${b.isActive ? 'confirmed' : 'cancelled_by_shop'}`} style={{ marginTop: '12px', display: 'inline-block' }}>
+                          <span className={`status-badge ${b.isActive ? 'confirmed' : 'cancelled_by_shop'} mt-12 inline-block`} >
                             {b.isActive ? 'Aktiv' : 'Inaktiv'}
                           </span>
                         </div>
@@ -619,21 +662,21 @@ export default function ShopAdminDashboard() {
 
                 <div className="card-premium">
                   <h3>Lägg till ny frisör / personal</h3>
-                  <form onSubmit={handleAddBarber} style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form onSubmit={handleAddBarber} className="mt-20 flex-col-gap-12" >
                     <div className="form-group"><label className="form-label">Förnamn</label><input type="text" required value={newBarberFirstName} onChange={e => setNewBarberFirstName(e.target.value)} className="form-input" placeholder="t.ex. Johan" /></div>
                     <div className="form-group"><label className="form-label">Efternamn</label><input type="text" required value={newBarberLastName} onChange={e => setNewBarberLastName(e.target.value)} className="form-input" placeholder="t.ex. Andersson" /></div>
                     <div className="form-group"><label className="form-label">E-postadress</label><input type="email" required value={newBarberEmail} onChange={e => setNewBarberEmail(e.target.value)} className="form-input" placeholder="johan@salong.se" /></div>
                     <div className="form-group"><label className="form-label">Lösenord</label><input type="password" required value={newBarberPassword} onChange={e => setNewBarberPassword(e.target.value)} className="form-input" placeholder="Minst 6 tecken" /></div>
-                    <div className="form-group"><label className="form-label">Bio (kort beskrivning)</label><textarea value={newBarberBio} onChange={e => setNewBarberBio(e.target.value)} className="form-input" placeholder="Erfaren frisör specialiserad på herrklippning..." style={{ minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }} /></div>
+                    <div className="form-group"><label className="form-label">Bio (kort beskrivning)</label><textarea value={newBarberBio} onChange={e => setNewBarberBio(e.target.value)} className="form-input textarea-input" placeholder="Erfaren frisör specialiserad på herrklippning..."  /></div>
                     
                     <div className="form-group">
                       <label className="form-label">Tjänster som utförs</label>
                       {services.length === 0 ? (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Skapa först tjänster under fliken "Tjänster" för att kunna välja dem här.</p>
+                        <p className="text-sm-muted" >Skapa först tjänster under fliken "Tjänster" för att kunna välja dem här.</p>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '10px', borderRadius: 'var(--radius-sm)' }}>
+                        <div className="services-scroll-list" >
                           {services.map(s => (
-                            <label key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                            <label key={s._id} className="checkbox-label-row" >
                               <input
                                 type="checkbox"
                                 checked={selectedServices.includes(s._id)}
@@ -652,7 +695,7 @@ export default function ShopAdminDashboard() {
                       )}
                     </div>
 
-                    <button type="submit" disabled={savingBarber} className="btn btn-primary" style={{ width: '100%' }}>{savingBarber ? 'Sparar...' : 'Spara personal'}</button>
+                    <button type="submit" disabled={savingBarber} className="btn btn-primary w-full" >{savingBarber ? 'Sparar...' : 'Spara personal'}</button>
                   </form>
                 </div>
               </div>
@@ -662,7 +705,7 @@ export default function ShopAdminDashboard() {
           {/* CUSTOMERS */}
           {activeTab === 'kunder' && !loading && (
             <div className="tab-pane card-premium">
-              <h3 style={{ marginBottom: '16px' }}>Kundregister ({customers.length} kunder)</h3>
+              <h3 className="mb-16" >Kundregister ({customers.length} kunder)</h3>
               {customers.length === 0 ? (
                 <div className="empty-state">📭 Inga kunder registrerade ännu. De skapas automatiskt vid bokning.</div>
               ) : (
@@ -689,21 +732,35 @@ export default function ShopAdminDashboard() {
           {activeTab === 'installningar' && !loading && (
             <div className="tab-pane card-premium">
               <h3>Salongens inställningar</h3>
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Dessa inställningar sparas direkt i databasen och påverkar bokningssidan.</p>
-              <form onSubmit={e => { e.preventDefault(); handleSaveSettings(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
+              <p className="settings-intro">Dessa inställningar sparas direkt i databasen och påverkar bokningssidan.</p>
+              <form onSubmit={e => { e.preventDefault(); handleSaveSettings(); }} className="settings-form">
                 <div className="form-group">
-                  <label className="form-label">Avbokningsfönster (timmar innan)</label>
-                  <input type="number" value={cancellationHours} onChange={e => { const val = e.target.value; setCancellationHours(val === '' ? '' : Number(val)); }} className="form-input" />
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Kunder kan inte avboka online senare än detta.</p>
+                  <label htmlFor="cancellationHours" className="form-label">Avbokningsfönster (timmar innan)</label>
+                  <input
+                    id="cancellationHours"
+                    type="number"
+                    value={cancellationHours}
+                    onChange={e => { const val = e.target.value; setCancellationHours(val === '' ? '' : Number(val)); }}
+                    className="form-input"
+                    placeholder="24"
+                  />
+                  <p className="form-help-text">Kunder kan inte avboka online senare än detta.</p>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Deposition vid onlinebokning (%)</label>
-                  <input type="number" value={depositPct} onChange={e => { const val = e.target.value; setDepositPct(val === '' ? '' : Number(val)); }} className="form-input" />
+                  <label htmlFor="depositPct" className="form-label">Deposition vid onlinebokning (%)</label>
+                  <input
+                    id="depositPct"
+                    type="number"
+                    value={depositPct}
+                    onChange={e => { const val = e.target.value; setDepositPct(val === '' ? '' : Number(val)); }}
+                    className="form-input"
+                    placeholder="0"
+                  />
                 </div>
                  <div className="form-group">
                   <label className="form-label">Godkända betalningsmetoder i salongen (Betala på plats)</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                  <div className="checkbox-group-container">
+                    <label className="checkbox-row-label">
                       <input
                         type="checkbox"
                         checked={acceptedPaymentMethods.includes('swish')}
@@ -717,7 +774,7 @@ export default function ShopAdminDashboard() {
                       />
                       📱 Swish
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                    <label className="checkbox-row-label">
                       <input
                         type="checkbox"
                         checked={acceptedPaymentMethods.includes('card')}
@@ -731,7 +788,7 @@ export default function ShopAdminDashboard() {
                       />
                       💳 Kort i salongen (Kortterminal)
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem' }}>
+                    <label className="checkbox-row-label">
                       <input
                         type="checkbox"
                         checked={acceptedPaymentMethods.includes('cash')}
@@ -746,17 +803,33 @@ export default function ShopAdminDashboard() {
                       💵 Kontant
                     </label>
                   </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Välj de betalningssätt som visas för kunder på bokningsbekräftelsen.</p>
+                  <p className="form-help-text">Välj de betalningssätt som visas för kunder på bokningsbekräftelsen.</p>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Öppettider (Mån-Fre)</label>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <input type="text" value={openTime} onChange={e => setOpenTime(e.target.value)} className="form-input" style={{ maxWidth: '100px' }} />
+                  <div className="opening-hours-row">
+                    <input
+                      id="openTime"
+                      type="text"
+                      aria-label="Öppningstid"
+                      value={openTime}
+                      onChange={e => setOpenTime(e.target.value)}
+                      className="form-input time-input"
+                      placeholder="09:00"
+                    />
                     <span>till</span>
-                    <input type="text" value={closeTime} onChange={e => setCloseTime(e.target.value)} className="form-input" style={{ maxWidth: '100px' }} />
+                    <input
+                      id="closeTime"
+                      type="text"
+                      aria-label="Stängningstid"
+                      value={closeTime}
+                      onChange={e => setCloseTime(e.target.value)}
+                      className="form-input time-input"
+                      placeholder="18:00"
+                    />
                   </div>
                 </div>
-                <button type="submit" disabled={savingSettings} className="btn btn-primary" style={{ width: 'fit-content' }}>
+                <button type="submit" disabled={savingSettings} className="btn btn-primary btn-fit-content">
                   {savingSettings ? 'Sparar...' : 'Spara inställningar'}
                 </button>
               </form>
@@ -766,6 +839,44 @@ export default function ShopAdminDashboard() {
       </div>
 
       <style jsx>{`
+
+        .toast-border-success { border-left: 4px solid #10b981; }
+        .toast-border-error { border-left: 4px solid #ef4444; }
+        .toast-border-info { border-left: 4px solid #3b82f6; }
+        .flex-center-gap-8 { display: flex; align-items: center; gap: 8px; }
+        .text-1-2rem { font-size: 1.2rem; }
+        .text-slate-800 { color: #1e293b; }
+        .toast-desc { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-secondary); }
+        .flex-center-gap-12 { display: flex; gap: 12px; align-items: center; }
+        .bell-icon-wrapper { position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background-color: var(--bg-tertiary); font-size: 1.1rem; transition: all var(--transition-fast); }
+        .nav-btn { padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border: 1px solid var(--primary); color: white; font-weight: 600; text-decoration: none; }
+        .position-relative { position: relative; }
+        .mb-16 { margin-bottom: 16px; }
+        .mb-24 { margin-bottom: 24px; }
+        .mt-32 { margin-top: 32px; }
+        .mt-20 { margin-top: 20px; }
+        .mt-16 { margin-top: 16px; }
+        .mt-12 { margin-top: 12px; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .text-danger { color: var(--color-danger) !important; }
+        .flex-col-gap-12 { display: flex; flex-direction: column; gap: 12px; }
+        .service-item-box { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s; }
+        .opacity-50 { opacity: 0.5; }
+        .text-sm-secondary { font-size: 0.85rem; color: var(--text-secondary); }
+        .text-sm-muted { font-size: 0.85rem; color: var(--text-muted); }
+        .btn-md { padding: 8px 16px; font-size: 0.85rem; }
+        .staff-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .staff-card { text-align: center; border: 1px solid var(--border-color); }
+        .text-3xl-mb-12 { font-size: 3rem; margin-bottom: 12px; }
+        .mb-12 { margin-bottom: 12px; }
+        .flex-wrap-center-gap-6 { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .service-pill { background-color: var(--bg-tertiary); padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; }
+        .inline-block { display: inline-block; }
+        .w-full { width: 100%; }
+        .services-scroll-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); }
+        .checkbox-label-row { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
+        .textarea-input { min-height: 80px; font-family: inherit; resize: vertical; }
+
         .admin-dashboard-wrapper { display: flex; min-height: calc(100vh - 160px); }
         .admin-sidebar { width: 260px; background-color: var(--secondary-hover); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); flex-shrink: 0; min-height: calc(100vh - 160px); }
         .sidebar-brand { padding: 24px; font-family: var(--font-primary); font-size: 1.3rem; font-weight: 800; color: #f8fafc; border-bottom: 1px solid #1e293b; }
@@ -909,6 +1020,57 @@ export default function ShopAdminDashboard() {
         }
         .animate-slide-in {
           animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Settings Classes */
+        .settings-intro {
+          color: var(--text-secondary);
+          margin-bottom: 24px;
+        }
+        .settings-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          max-width: 600px;
+        }
+        .form-help-text {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+        }
+        .checkbox-group-container {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 6px;
+        }
+        .checkbox-row-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          font-size: 0.95rem;
+        }
+        .opening-hours-row {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+        }
+        .time-input {
+          max-width: 100px;
+        }
+        .btn-fit-content {
+          width: fit-content;
+        }
+
+        /* Service Classes */
+        .admin-form-container {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 20px;
+        }
+        .w-full {
+          width: 100%;
         }
       `}</style>
     </div>

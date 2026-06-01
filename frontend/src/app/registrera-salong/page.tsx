@@ -94,7 +94,7 @@ function RegisterContent() {
                 <h4>Nästa steg:</h4>
                 <p>Logga in på din salongspanel för att lägga till frisörer, arbetstider och tjänster.</p>
               </div>
-              <Link href="/login" className="btn btn-primary" style={{ width: '100%' }}>
+              <Link href="/login" className="btn btn-primary success-btn">
                 Logga in på instrumentpanelen
               </Link>
             </div>
@@ -102,7 +102,7 @@ function RegisterContent() {
             <>
               <div className="register-header text-center">
                 <h2>Registrera din salong</h2>
-                <p>Du har valt abonnemangsplanen: <strong style={{ color: 'var(--primary)' }}>{planQuery === 'pro' ? 'Professional' : 'Bas'}</strong></p>
+                <p>Du har valt abonnemangsplanen: <strong className="plan-badge">{planQuery === 'pro' ? 'Professional' : 'Bas'}</strong></p>
               </div>
 
               {errorMsg && <div className="error-alert">⚠️ {errorMsg}</div>}
@@ -112,8 +112,9 @@ function RegisterContent() {
                 <h3 className="form-subheading">1. Salongsdetaljer</h3>
 
                 <div className="form-group">
-                  <label className="form-label">Salongens namn</label>
+                  <label htmlFor="shopName" className="form-label">Salongens namn</label>
                   <input
+                    id="shopName"
                     type="text"
                     required
                     value={shopName}
@@ -124,10 +125,11 @@ function RegisterContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Din bokningslänk</label>
+                  <label htmlFor="slug" className="form-label">Din bokningslänk</label>
                   <div className="slug-input-wrapper">
                     <span className="slug-prefix">bokabarber.se/</span>
                     <input
+                      id="slug"
                       type="text"
                       required
                       value={slug}
@@ -140,8 +142,9 @@ function RegisterContent() {
 
                 <div className="grid-responsive compact-grid compact-grid-address">
                   <div className="form-group">
-                    <label className="form-label">Gatuadress</label>
+                    <label htmlFor="street" className="form-label">Gatuadress</label>
                     <input
+                      id="street"
                       type="text"
                       required
                       value={street}
@@ -151,8 +154,9 @@ function RegisterContent() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Postort</label>
+                    <label htmlFor="city" className="form-label">Postort</label>
                     <input
+                      id="city"
                       type="text"
                       required
                       value={city}
@@ -162,8 +166,9 @@ function RegisterContent() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Postnummer</label>
+                    <label htmlFor="zipCode" className="form-label">Postnummer</label>
                     <input
+                      id="zipCode"
                       type="text"
                       required
                       value={zipCode}
@@ -174,34 +179,39 @@ function RegisterContent() {
                   </div>
                 </div>
 
-                <h3 className="form-subheading" style={{ marginTop: '14px' }}>2. Ägarkonto</h3>
+                <h3 className="form-subheading owner-subheading">2. Ägarkonto</h3>
 
                 <div className="grid-responsive compact-grid compact-grid-owner">
                   <div className="form-group">
-                    <label className="form-label">Förnamn</label>
+                    <label htmlFor="firstName" className="form-label">Förnamn</label>
                     <input
+                      id="firstName"
                       type="text"
                       required
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       className="form-input"
+                      placeholder="Ditt förnamn"
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Efternamn</label>
+                    <label htmlFor="lastName" className="form-label">Efternamn</label>
                     <input
+                      id="lastName"
                       type="text"
                       required
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       className="form-input"
+                      placeholder="Ditt efternamn"
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">E-postadress</label>
+                  <label htmlFor="email" className="form-label">E-postadress</label>
                   <input
+                    id="email"
                     type="email"
                     required
                     value={email}
@@ -212,8 +222,9 @@ function RegisterContent() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Lösenord</label>
+                  <label htmlFor="password" className="form-label">Lösenord</label>
                   <input
+                    id="password"
                     type="password"
                     required
                     value={password}
@@ -268,6 +279,9 @@ function RegisterContent() {
           color: var(--text-secondary);
           font-size: 0.9rem;
         }
+        .plan-badge {
+          color: var(--primary);
+        }
         .form-subheading {
           font-size: 1rem;
           margin-bottom: 4px;
@@ -275,6 +289,9 @@ function RegisterContent() {
           border-bottom: 1px solid var(--border-color);
           padding-bottom: 4px;
           color: var(--text-secondary);
+        }
+        .owner-subheading {
+          margin-top: 14px;
         }
         .register-form {
           display: flex;
@@ -375,6 +392,9 @@ function RegisterContent() {
         .success-text {
           color: var(--text-secondary);
           font-size: 1.1rem;
+        }
+        .success-btn {
+          width: 100%;
         }
         .next-steps {
           text-align: left;

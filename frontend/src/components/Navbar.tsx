@@ -113,7 +113,7 @@ export default function Navbar() {
     <header className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}`}>
       <div className="container navbar-inner">
         <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
-          <svg className="barber-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', width: 'var(--logo-icon-size, 34px)', height: 'var(--logo-icon-size, 34px)', filter: 'drop-shadow(0 2px 4px rgba(197, 160, 89, 0.15))' }}>
+          <svg className="barber-logo-icon navbar-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="6" cy="6" r="3" />
             <path d="M8.12 8.12 12 12" />
             <path d="M20 4 12 12" />
@@ -142,21 +142,21 @@ export default function Navbar() {
             <div className="user-profile-menu">
               <Link href={getDashboardLink()} className="btn btn-secondary btn-dashboard-nav" aria-label="Instrumentpanel">
                 <span className="dashboard-text">Instrumentpanel</span>
-                <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="9" />
                   <rect x="14" y="3" width="7" height="5" />
                   <rect x="14" y="12" width="7" height="9" />
                   <rect x="3" y="16" width="7" height="5" />
                 </svg>
               </Link>
-              <button onClick={handleLogout} className="btn btn-outline btn-logout-nav" style={{ padding: '8px 16px', fontSize: '0.95rem', borderWidth: '1px' }}>
+              <button onClick={handleLogout} className="btn btn-outline btn-logout-nav">
                 Logga ut
               </button>
             </div>
           ) : (
             <Link href="/login" className="btn btn-primary btn-booking-nav" aria-label="Logga in">
               <span className="login-text">Logga in</span>
-              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -164,7 +164,12 @@ export default function Navbar() {
           )}
 
           {/* Mobile menu button */}
-          <button className={`menu-toggle ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
+          <button 
+            className={`menu-toggle ${menuOpen ? 'open' : ''}`} 
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Stäng meny' : 'Öppna meny'}
+            title={menuOpen ? 'Stäng meny' : 'Öppna meny'}
+          >
             <span></span>
             <span></span>
             <span></span>

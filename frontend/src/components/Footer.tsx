@@ -15,7 +15,7 @@ export default function Footer() {
           <div className="container footer-grid">
             <div className="footer-brand">
               <Link href="/" className="footer-logo" aria-label="BokaBarber startsida">
-                <svg className="barber-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', width: 'var(--logo-icon-size, 34px)', height: 'var(--logo-icon-size, 34px)', filter: 'drop-shadow(0 2px 4px rgba(197, 160, 89, 0.15))' }}>
+                <svg className="barber-logo-icon footer-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="6" cy="6" r="3" />
                   <path d="M8.12 8.12 12 12" />
                   <path d="M20 4 12 12" />
@@ -81,7 +81,7 @@ export default function Footer() {
               <h4 className="footer-title">Kontakt</h4>
 
               <a href="mailto:support@bokabarber.se" className="contact-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="contact-icon">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
@@ -89,7 +89,7 @@ export default function Footer() {
               </a>
 
               <span className="contact-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="contact-icon">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
@@ -97,7 +97,7 @@ export default function Footer() {
               </span>
 
               <span className="contact-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="contact-icon">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
@@ -198,6 +198,13 @@ export default function Footer() {
           height: var(--logo-icon-size, 22px);
         }
 
+        .footer-brand-icon {
+          color: var(--accent);
+          width: var(--logo-icon-size, 34px);
+          height: var(--logo-icon-size, 34px);
+          filter: drop-shadow(0 2px 4px rgba(197, 160, 89, 0.15));
+        }
+
         .brand-wordmark {
           display: inline-flex;
           align-items: center;
@@ -295,6 +302,11 @@ export default function Footer() {
           display: flex;
           align-items: center;
           gap: 10px;
+        }
+
+        .contact-icon {
+          color: var(--accent);
+          flex-shrink: 0;
         }
 
         .footer-bottom {

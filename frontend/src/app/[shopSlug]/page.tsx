@@ -31,7 +31,6 @@ interface ShopData {
 
 export default function ShopBookingPage() {
   const params = useParams();
-  const router = useRouter();
   const slug = params.shopSlug as string;
 
   const [step, setStep] = useState(1);
@@ -52,7 +51,11 @@ export default function ShopBookingPage() {
   // Selections
   const [selectedService, setSelectedService] = useState<ServiceData | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<BarberData | null>(null);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
   const [selectedTime, setSelectedTime] = useState('');
   const [customerForm, setCustomerForm] = useState({ firstName: '', lastName: '', email: '', phoneNumber: '' });
   const [upcomingTimes, setUpcomingTimes] = useState<{ label: string; date: string; time: string }[]>([]);
@@ -65,7 +68,7 @@ export default function ShopBookingPage() {
       try {
         const res = await api.getShopBySlug(slug);
         if (res.ok) {
-          const d = res.data as { shop: ShopData; settings?: any; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
+          const d = res.data as { shop: ShopData; settings?: { acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[] }; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
           setShop(d.shop);
           setSettings(d.settings || null);
           setServices(d.services || []);
@@ -74,7 +77,7 @@ export default function ShopBookingPage() {
         } else {
           setError('Salongen hittades inte.');
         }
-      } catch (err) {
+      } catch {
         setError('Kunde inte ladda salongsinformation.');
       } finally {
         setLoading(false);
@@ -83,12 +86,7 @@ export default function ShopBookingPage() {
     loadShop();
   }, [slug]);
 
-  // Set initial date to tomorrow
-  useEffect(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setSelectedDate(tomorrow.toISOString().split('T')[0]);
-  }, []);
+
 
   // Fetch upcoming quick slots for today and tomorrow dynamically
   useEffect(() => {
@@ -190,7 +188,10 @@ export default function ShopBookingPage() {
   }, [shop, selectedBarber, selectedDate, selectedService, step]);
 
   useEffect(() => {
-    loadSlots();
+    const timer = setTimeout(() => {
+      loadSlots();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadSlots]);
 
   const handleSubmitBooking = async () => {
@@ -238,6 +239,13 @@ export default function ShopBookingPage() {
         <div className="spinner"></div>
         <p>Laddar salongsinformation...</p>
         <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
           .booking-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 16px; background-color: var(--bg-primary); }
           .spinner { width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
           @keyframes spin { to { transform: rotate(360deg); } }
@@ -251,10 +259,17 @@ export default function ShopBookingPage() {
       <div className="booking-error public-theme animate-fade-in">
         <h2>⚠️ {error}</h2>
         <p>Kontrollera att webbadressen är korrekt eller sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary" style={{ marginTop: '24px' }}>
+        <Link href="/sok" className="btn btn-primary mt-24">
           Sök salonger
         </Link>
         <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
           .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
           .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
           .booking-error p { color: var(--text-secondary); }
@@ -268,10 +283,17 @@ export default function ShopBookingPage() {
       <div className="booking-error public-theme animate-fade-in">
         <h2>Denna salong tar inte emot bokningar just nu</h2>
         <p>Återkom gärna vid ett senare tillfälle eller sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary" style={{ marginTop: '24px' }}>
+        <Link href="/sok" className="btn btn-primary mt-24">
           Sök salonger
         </Link>
         <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
           .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
           .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
           .booking-error p { color: var(--text-secondary); }
@@ -285,10 +307,17 @@ export default function ShopBookingPage() {
       <div className="booking-error public-theme animate-fade-in">
         <h2>Denna salong är inte redo att ta emot bokningar ännu</h2>
         <p>Administratören håller på att ställa in salongen. Sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary" style={{ marginTop: '24px' }}>
+        <Link href="/sok" className="btn btn-primary mt-24">
           Sök salonger
         </Link>
         <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
           .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
           .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
           .booking-error p { color: var(--text-secondary); }
@@ -313,10 +342,17 @@ export default function ShopBookingPage() {
           <div className="detail-row"><span>Pris:</span><strong>{selectedService?.price} kr</strong></div>
         </div>
         <p className="payment-note">💰 Betalning sker på plats i salongen.</p>
-        <Link href="/" className="btn btn-primary" style={{ marginTop: '32px' }}>
+        <Link href="/" className="btn btn-primary mt-32">
           Tillbaka till startsidan
         </Link>
         <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
           .booking-success { display: flex; flex-direction: column; align-items: center; padding: 80px 24px; text-align: center; background-color: var(--bg-primary); min-height: 100vh; }
           .success-icon { font-size: 4rem; margin-bottom: 20px; }
           .booking-success h2 { font-family: var(--font-primary); font-size: 2.4rem; color: var(--primary); margin-bottom: 12px; }
@@ -348,7 +384,7 @@ export default function ShopBookingPage() {
         {/* 🗺️ STEPS NAVIGATION BAR */}
         <section className="stepper-section">
           <div className="stepper-line">
-            <div className="stepper-progress-fill" style={{ width: `${((step - 1) / 4) * 100}%` }}></div>
+            <div className={`stepper-progress-fill w-step-${step}`}></div>
           </div>
           <div className="stepper-dots">
             {['Tjänst', 'Tid & Dag', 'Uppgifter', 'Bekräftelse'].map((lbl, idx) => {
@@ -404,7 +440,7 @@ export default function ShopBookingPage() {
 
                 {/* Normal Services Grid */}
                 {normalServices.length > 0 && (
-                  <div className="services-subgrid" style={{ marginTop: '32px' }}>
+                  <div className="services-subgrid">
                     {normalServices.map(s => (
                       <div key={s._id} className="card-premium service-item-card">
                         <div className="service-card-top">
@@ -427,6 +463,7 @@ export default function ShopBookingPage() {
                   </div>
                 )}
 
+                {/* services.length === 0 */}
                 {services.length === 0 && (
                   <div className="empty-state card-premium">Denna salong har inga tjänster tillgängliga just nu.</div>
                 )}
@@ -444,14 +481,14 @@ export default function ShopBookingPage() {
                     {barbers.map(b => (
                       <div key={b._id} className="card-premium barber-item-card text-center">
                         <div className="barber-avatar-box">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           {b.avatar ? <img src={b.avatar} alt={b.name} /> : '🧔'}
                         </div>
                         <h3 className="barber-name-serif">{b.name}</h3>
                         <p className="barber-bio-text">{b.bio || 'Professionell barberare dedikerad till förstklassigt hantverk.'}</p>
                         <button
                           onClick={() => { setSelectedBarber(b); setStep(3); }}
-                          className="btn btn-primary"
-                          style={{ marginTop: '16px', width: '100%' }}
+                          className="btn btn-primary barber-select-btn"
                         >
                           Välj {b.name.split(' ')[0]}
                         </button>
@@ -469,8 +506,9 @@ export default function ShopBookingPage() {
                 <h2 className="step-title">Välj datum & tid</h2>
                 <div className="datetime-flex">
                   <div className="form-group date-picker-group">
-                    <label className="form-label">Datum</label>
+                    <label htmlFor="selectedDate" className="form-label">Datum</label>
                     <input
+                      id="selectedDate"
                       type="date"
                       value={selectedDate}
                       min={new Date().toISOString().split('T')[0]}
@@ -515,44 +553,52 @@ export default function ShopBookingPage() {
                 <form className="customer-details-form" onSubmit={e => { e.preventDefault(); setStep(5); }}>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Förnamn*</label>
+                      <label htmlFor="custFirstName" className="form-label">Förnamn*</label>
                       <input
+                        id="custFirstName"
                         type="text"
                         required
                         value={customerForm.firstName}
                         onChange={e => setCustomerForm({ ...customerForm, firstName: e.target.value })}
                         className="form-input"
+                        placeholder="Förnamn"
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Efternamn*</label>
+                      <label htmlFor="custLastName" className="form-label">Efternamn*</label>
                       <input
+                        id="custLastName"
                         type="text"
                         required
                         value={customerForm.lastName}
                         onChange={e => setCustomerForm({ ...customerForm, lastName: e.target.value })}
                         className="form-input"
+                        placeholder="Efternamn"
                       />
                     </div>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">E-postadress*</label>
+                    <label htmlFor="custEmail" className="form-label">E-postadress*</label>
                     <input
+                      id="custEmail"
                       type="email"
                       required
                       value={customerForm.email}
                       onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })}
                       className="form-input"
+                      placeholder="namn@exempel.se"
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Telefonnummer*</label>
+                    <label htmlFor="custPhone" className="form-label">Telefonnummer*</label>
                     <input
+                      id="custPhone"
                       type="tel"
                       required
                       value={customerForm.phoneNumber}
                       onChange={e => setCustomerForm({ ...customerForm, phoneNumber: e.target.value })}
                       className="form-input"
+                      placeholder="070-123 45 67"
                     />
                   </div>
                   <div className="wizard-actions">
@@ -593,7 +639,7 @@ export default function ShopBookingPage() {
                       const methods = settings?.acceptedPaymentMethods;
                       if (!methods || methods.length === 0) return null;
                       return (
-                        <span style={{ display: 'block', marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <span className="payment-methods-detail">
                           <strong>Denna salong accepterar:</strong>{' '}
                           {methods.map((m, idx) => {
                             const labels = { swish: 'Swish 📱', card: 'Kort 💳', cash: 'Kontant 💵' };
@@ -613,7 +659,7 @@ export default function ShopBookingPage() {
                   </p>
                 </div>
 
-                <div className="wizard-actions" style={{ marginTop: '32px' }}>
+                <div className="wizard-actions confirm-actions">
                   <button onClick={() => setStep(4)} className="btn btn-outline">← Ändra uppgifter</button>
                   <button onClick={handleSubmitBooking} disabled={submitting} className="btn btn-primary btn-lg-gold">
                     {submitting ? 'Bokar din ritual...' : 'Boka nu'}
@@ -649,9 +695,9 @@ export default function ShopBookingPage() {
 
             <div className="sidebar-card regular-sidebar-card">
               <h4>Kommande tider</h4>
-              {upcomingLoading && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Söker tider...</div>}
+              {upcomingLoading && <div className="sidebar-loading-text">Söker tider...</div>}
               {!upcomingLoading && upcomingTimes.length === 0 && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '12px' }}>Inga lediga tider idag eller imorgon.</div>
+                <div className="sidebar-empty-text">Inga lediga tider idag eller imorgon.</div>
               )}
               {!upcomingLoading && upcomingTimes.length > 0 && (
                 <div className="upcoming-times-list">
@@ -660,7 +706,6 @@ export default function ShopBookingPage() {
                       key={idx}
                       className="upcoming-time-item"
                       onClick={() => handleQuickBook(item.date, item.time)}
-                      style={{ width: '100%', outline: 'none', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                     >
                       <span>{item.label}</span>
                       <span className="upcoming-arrow">→</span>
@@ -675,6 +720,13 @@ export default function ShopBookingPage() {
       </div>
 
       <style jsx>{`
+
+        .w-step-1 { width: 0%; }
+        .w-step-2 { width: 25%; }
+        .w-step-3 { width: 50%; }
+        .w-step-4 { width: 75%; }
+        .w-step-5 { width: 100%; }
+
         .booking-page {
           background-color: var(--bg-primary);
           min-height: 100vh;
@@ -682,7 +734,15 @@ export default function ShopBookingPage() {
         }
 
         /* 👑 HEADER */
-        .booking-header {
+        .mt-24 {
+          margin-top: 24px;
+        }
+
+        .mt-32 {
+          margin-top: 32px;
+        }
+
+        .shop-header {
           margin-bottom: 40px;
         }
 
@@ -885,6 +945,7 @@ export default function ShopBookingPage() {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
           gap: 24px;
+          margin-top: 32px;
         }
 
         .service-item-card {
@@ -972,6 +1033,11 @@ export default function ShopBookingPage() {
         .barber-item-card {
           background-color: #ffffff;
           padding: 32px 24px;
+        }
+
+        .barber-select-btn {
+          margin-top: 16px;
+          width: 100%;
         }
 
         .barber-avatar-box {
@@ -1246,6 +1312,31 @@ export default function ShopBookingPage() {
           color: var(--text-primary);
           cursor: pointer;
           transition: all var(--transition-fast);
+          width: 100%;
+          outline: none;
+          text-align: left;
+        }
+
+        .payment-methods-detail {
+          display: block;
+          margin-top: 8px;
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+        }
+
+        .confirm-actions {
+          margin-top: 32px;
+        }
+
+        .sidebar-loading-text {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+        }
+
+        .sidebar-empty-text {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+          margin-top: 12px;
         }
         .upcoming-time-item:hover {
           background-color: var(--primary-light) !important;
@@ -1258,6 +1349,7 @@ export default function ShopBookingPage() {
           color: var(--accent);
         }
 
+        .mt-24 { margin-top: 24px; }
         /* OTHERS */
         .error-banner {
           background-color: #fee2e2;
