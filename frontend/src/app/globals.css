@@ -1289,7 +1289,7 @@ section[id] {
   background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 48px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1747,7 +1747,7 @@ section[id] {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 640px) {
   .home-container .pricing-grid {
     flex-direction: row;
     align-items: stretch;
@@ -1757,6 +1757,12 @@ section[id] {
   .home-container .pricing-card {
     flex: 1;
     max-width: 420px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-container .pricing-card {
+    padding: 48px;
   }
 }
 
