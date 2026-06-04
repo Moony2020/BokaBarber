@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { api } from '@/utils/api';
 
 function RegisterContent() {
   const router = useRouter();
@@ -45,10 +46,7 @@ function RegisterContent() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/auth/register-shop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await api.registerShop({
           email,
           password,
           firstName,
@@ -61,14 +59,12 @@ function RegisterContent() {
             zipCode,
             country: 'Sweden'
           }
-        })
-      });
-
-      const data = await res.json();
+        });
 
       if (res.ok) {
         setSuccess(true);
       } else {
+        const data = res.data as { error?: string };
         setErrorMsg(data.error || 'Registreringen misslyckades.');
       }
     } catch (err) {

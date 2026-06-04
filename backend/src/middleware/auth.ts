@@ -14,7 +14,11 @@ export interface AuthenticatedRequest extends Request {
   user?: TokenPayload;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'boka_barber_ultra_secure_secret_key_2026';
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL ERROR: JWT_SECRET environment variable is missing.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // =========================================================================
 // 1. AUTHENTICATE USER MIDDLEWARE
@@ -105,7 +109,7 @@ export const checkSubscriptionActive = async (req: AuthenticatedRequest, res: Re
 
   const shopId = req.user.shopId || req.params.shopId || req.query.shopId || req.body.shopId;
   if (!shopId) {
-    next();
+    res.status(400).json({ error: 'Salongs-ID (shopId) saknas.' });
     return;
   }
 

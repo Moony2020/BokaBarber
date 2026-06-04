@@ -1,5 +1,17 @@
 import nodemailer from 'nodemailer';
 
+// Helper to escape HTML to prevent XSS in emails
+const escapeHTML = (str: string) => {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[m] || m));
+};
+
 // Configure Nodemailer transporter using environment variables
 const createTransporter = () => {
   // Check if SMTP options are set in .env, otherwise use mock/log transporter
@@ -80,19 +92,19 @@ export async function sendBookingConfirmationEmail({
 
   const html = `
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b;">
-      <h2 style="color: #c28d4b; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px;">Bokningsbekräftelse - ${shopName}</h2>
-      <p>Hej <strong>${customerName}</strong>,</p>
-      <p>Tack för din bokning! Din tid hos <strong>${shopName}</strong> är nu bekräftad.</p>
+      <h2 style="color: #c28d4b; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px;">Bokningsbekräftelse - ${escapeHTML(shopName)}</h2>
+      <p>Hej <strong>${escapeHTML(customerName)}</strong>,</p>
+      <p>Tack för din bokning! Din tid hos <strong>${escapeHTML(shopName)}</strong> är nu bekräftad.</p>
       
       <div style="background-color: #f8fafc; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #c28d4b;">
         <h3 style="margin-top: 0; color: #0f172a;">Bokningsdetaljer</h3>
         <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 6px 0; color: #64748b;">Tjänst:</td><td style="padding: 6px 0; font-weight: bold;">${serviceName}</td></tr>
-          <tr><td style="padding: 6px 0; color: #64748b;">Frisör:</td><td style="padding: 6px 0; font-weight: bold;">${barberName}</td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;">Tjänst:</td><td style="padding: 6px 0; font-weight: bold;">${escapeHTML(serviceName)}</td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;">Frisör:</td><td style="padding: 6px 0; font-weight: bold;">${escapeHTML(barberName)}</td></tr>
           <tr><td style="padding: 6px 0; color: #64748b;">Datum:</td><td style="padding: 6px 0; font-weight: bold; text-transform: capitalize;">${dateStr}</td></tr>
           <tr><td style="padding: 6px 0; color: #64748b;">Tid:</td><td style="padding: 6px 0; font-weight: bold;">Kl. ${timeStr}</td></tr>
           <tr><td style="padding: 6px 0; color: #64748b;">Pris:</td><td style="padding: 6px 0; font-weight: bold; color: #c28d4b;">${price} kr</td></tr>
-          <tr><td style="padding: 6px 0; color: #64748b;">Adress:</td><td style="padding: 6px 0; font-weight: bold;">${shopAddress}</td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;">Adress:</td><td style="padding: 6px 0; font-weight: bold;">${escapeHTML(shopAddress)}</td></tr>
         </table>
       </div>
 
@@ -132,9 +144,9 @@ export async function sendBookingCancellationEmail({
 
   const html = `
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b;">
-      <h2 style="color: #ef4444; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px;">Avbokningsbekräftelse - ${shopName}</h2>
-      <p>Hej <strong>${customerName}</strong>,</p>
-      <p>Detta är en bekräftelse på att din tid för <strong>${serviceName}</strong> hos <strong>${shopName}</strong> den ${dateStr} kl. ${timeStr} har blivit <strong>avbokad</strong>.</p>
+      <h2 style="color: #ef4444; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px;">Avbokningsbekräftelse - ${escapeHTML(shopName)}</h2>
+      <p>Hej <strong>${escapeHTML(customerName)}</strong>,</p>
+      <p>Detta är en bekräftelse på att din tid för <strong>${escapeHTML(serviceName)}</strong> hos <strong>${escapeHTML(shopName)}</strong> den ${dateStr} kl. ${timeStr} har blivit <strong>avbokad</strong>.</p>
       
       <p>Vi hoppas att vi får välkomna dig tillbaka i framtiden! Du kan när som helst besöka vår bokningssida för att hitta en ny ledig tid.</p>
       
@@ -170,8 +182,8 @@ export async function sendSubscriptionPaymentWarningEmail({
   const html = `
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #fee2e2; border-radius: 8px; color: #1e293b; background-color: #fef2f2;">
       <h2 style="color: #dc2626; border-bottom: 2px solid #fee2e2; padding-bottom: 12px; margin-bottom: 20px;">⚠️ Betalningsfel - Åtgärd krävs!</h2>
-      <p>Hej <strong>${ownerName}</strong>,</p>
-      <p>Det här är ett viktigt systemmeddelande angående din prenumeration för salongen <strong>${shopName}</strong>.</p>
+      <p>Hej <strong>${escapeHTML(ownerName)}</strong>,</p>
+      <p>Det här är ett viktigt systemmeddelande angående din prenumeration för salongen <strong>${escapeHTML(shopName)}</strong>.</p>
       <p>Vi kunde tyvärr inte debitera ditt registrerade kort för ditt abonnemang.</p>
       
       <div style="background-color: #fff; padding: 16px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #dc2626; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -181,7 +193,7 @@ export async function sendSubscriptionPaymentWarningEmail({
 
       <p>Vänligen logga in på din BokaBarber instrumentpanel och gå till <strong>Inställningar / Abonnemang</strong> för att uppdatera dina betalningsuppgifter via Stripe Billing Portal.</p>
       
-      <a href="http://localhost:3000/login" style="display: inline-block; background-color: #dc2626; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin-top: 16px;">Uppdatera betalningskort nu</a>
+      <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display: inline-block; background-color: #dc2626; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin-top: 16px;">Uppdatera betalningskort nu</a>
 
       <div style="margin-top: 30px; border-top: 1px solid #fee2e2; padding-top: 16px; font-size: 0.8rem; color: #94a3b8; text-align: center;">
         BokaBarber SaaS Plattformsadministration
@@ -211,8 +223,8 @@ export async function sendSubscriptionSuspendedEmail({
   const html = `
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #fecaca; border-radius: 8px; color: #1e293b; background-color: #fff5f5;">
       <h2 style="color: #b91c1c; border-bottom: 2px solid #fecaca; padding-bottom: 12px; margin-bottom: 20px;">🚨 Din salong har stängts av (Suspenderats)</h2>
-      <p>Hej <strong>${ownerName}</strong>,</p>
-      <p>Detta är en viktig avisering om att din salong <strong>${shopName}</strong> har stängts av (suspenderats) på grund av utebliven prenumerationsbetalning.</p>
+      <p>Hej <strong>${escapeHTML(ownerName)}</strong>,</p>
+      <p>Detta är en viktig avisering om att din salong <strong>${escapeHTML(shopName)}</strong> har stängts av (suspenderats) på grund av utebliven prenumerationsbetalning.</p>
       
       <div style="background-color: #fee2e2; padding: 16px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #b91c1c;">
         <p style="margin: 0; font-weight: bold; color: #7f1d1d;">Följande begränsningar gäller nu:</p>
@@ -225,7 +237,7 @@ export async function sendSubscriptionSuspendedEmail({
 
       <p>För att återaktivera din salong, logga in och uppdatera ditt kort via Stripe på länken nedan:</p>
       
-      <a href="http://localhost:3000/login" style="display: inline-block; background-color: #b91c1c; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin-top: 16px;">Lås upp din salong direkt</a>
+      <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display: inline-block; background-color: #b91c1c; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin-top: 16px;">Lås upp din salong direkt</a>
 
       <div style="margin-top: 30px; border-top: 1px solid #fecaca; padding-top: 16px; font-size: 0.8rem; color: #94a3b8; text-align: center;">
         BokaBarber SaaS Plattformsadministration

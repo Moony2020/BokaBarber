@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { api } from '@/utils/api';
 
 interface User {
   id: string;
@@ -64,16 +65,21 @@ export default function Navbar() {
   }, [pathname]);
 
   useEffect(() => {
-    const loadUser = () => {
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored));
-        } catch (e) {
-          console.error(e);
+    const loadUser = async () => {
+      try {
+        const res = await api.me();
+        if (res.ok) {
+          const data = res.data as { user: User };
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        } else {
+          setUser(null);
+          localStorage.removeItem('user');
         }
-      } else {
+      } catch (e) {
+        console.error('Failed to verify user:', e);
         setUser(null);
+        localStorage.removeItem('user');
       }
     };
 
@@ -91,7 +97,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/api/v1/auth/logout', { method: 'POST' });
+      await api.logout();
       localStorage.removeItem('user');
       setUser(null);
       window.dispatchEvent(new Event('auth-change'));

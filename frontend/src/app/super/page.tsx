@@ -48,10 +48,30 @@ export default function SuperAdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) { router.push('/login'); return; }
-    const user = JSON.parse(userStr);
-    if (user.role !== 'super_admin') { router.push('/'); }
+    const verifyAuth = async (isInitial = false) => {
+      try {
+        const res = await api.me();
+        if (res.ok) {
+          const data = res.data as { user: { role: string } };
+          if (data.user.role !== 'super_admin') {
+            router.push('/');
+          }
+        } else {
+          if (isInitial || res.status === 401 || res.status === 403) {
+            router.push('/login');
+          }
+        }
+      } catch (err) {
+        console.error('Auth verification failed', err);
+        if (isInitial) {
+          router.push('/login');
+        }
+      }
+    };
+    verifyAuth(true);
+
+    const authCheckInterval = setInterval(() => verifyAuth(false), 30000);
+    return () => clearInterval(authCheckInterval);
   }, [router]);
 
   const loadDashboard = useCallback(async () => {

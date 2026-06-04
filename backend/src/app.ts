@@ -1,9 +1,10 @@
-import express, { Response } from 'express';
+import express, { Response, Request } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
+import { body, validationResult } from 'express-validator';
 import mongoose, { Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -27,7 +28,29 @@ import {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'boka_barber_ultra_secure_secret_key_2026';
+
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL ERROR: JWT_SECRET environment variable is missing.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('❌ FATAL ERROR: STRIPE_SECRET_KEY is missing in production.');
+    process.exit(1);
+  }
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('❌ FATAL ERROR: STRIPE_WEBHOOK_SECRET is missing in production.');
+    process.exit(1);
+  }
+  if (!process.env.CLIENT_URL) {
+    console.error('❌ FATAL ERROR: CLIENT_URL is missing in production.');
+    process.exit(1);
+  }
+}
 
 // Instantiate Stripe securely using environment variables
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_stripe_key_for_compilation_safety_2026', {
@@ -38,8 +61,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_stripe_
 app.set('trust proxy', 1);
 
 // Configure CORS first so OPTIONS/Preflight requests succeed immediately
+const CLIENT_URL = process.env.CLIENT_URL;
+if (!CLIENT_URL && process.env.NODE_ENV === 'production') {
+  console.error('❌ FATAL: CLIENT_URL environment variable is missing in production.');
+  process.exit(1);
+}
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
 
@@ -121,12 +150,34 @@ export const runDailyTrialExpirationCheck = async (): Promise<void> => {
   }
 };
 
+// Middleware to handle express-validator results
+const validateRequest = (req: Request, res: Response, next: express.NextFunction): void => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    // Standardize error message to match frontend expectations
+    const firstError = errors.array()[0].msg;
+    res.status(400).json({ error: firstError, errors: errors.array() });
+    return;
+  }
+  next();
+};
+
 // ===========================================================================
 // 🗝️ AUTH ROUTES
 // ===========================================================================
 
 // Register Shop + Admin
-app.post('/api/v1/auth/register-shop', async (req, res) => {
+app.post('/api/v1/auth/register-shop', 
+  [
+    body('email').isEmail().withMessage('Ogiltig e-postadress.'),
+    body('password').isLength({ min: 6 }).withMessage('Lösenordet måste vara minst 6 tecken.'),
+    body('firstName').notEmpty().withMessage('Förnamn krävs.'),
+    body('lastName').notEmpty().withMessage('Efternamn krävs.'),
+    body('shopName').notEmpty().withMessage('Salongsnamn krävs.'),
+    body('slug').matches(/^[a-z0-9-]+$/).withMessage('Ogiltig webbadress.'),
+  ],
+  validateRequest,
+  async (req: Request, res: Response) => {
   const { email, password, firstName, lastName, shopName, slug, address } = req.body;
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -212,7 +263,13 @@ app.post('/api/v1/auth/register-shop', async (req, res) => {
 });
 
 // Login
-app.post('/api/v1/auth/login', async (req, res) => {
+app.post('/api/v1/auth/login', 
+  [
+    body('email').isEmail().withMessage('Ogiltig e-postadress.'),
+    body('password').notEmpty().withMessage('Lösenord krävs.'),
+  ],
+  validateRequest,
+  async (req: Request, res: Response) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -256,18 +313,25 @@ app.get('/api/v1/auth/me', authenticateUser, (req: AuthenticatedRequest, res) =>
 // 🌐 PUBLIC SHOP ROUTES (Used by Search page & Booking page)
 // ===========================================================================
 
+// Helper to escape regex special characters (prevents ReDoS and injection)
+const escapeRegExp = (text: string) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+
 // Search shops — supports ?city=, ?q=, ?service= query params
 app.get('/api/v1/shops/search', async (req, res) => {
   try {
     const { city, q, service } = req.query;
     const filter: Record<string, unknown> = { isActive: true };
 
-    if (city) filter['address.city'] = { $regex: new RegExp(city as string, 'i') };
+    if (city) {
+      filter['address.city'] = { $regex: new RegExp(escapeRegExp(city as string), 'i') };
+    }
+    
     if (q) {
+      const escapedQ = escapeRegExp(q as string);
       filter.$or = [
-        { name: { $regex: new RegExp(q as string, 'i') } },
-        { 'address.city': { $regex: new RegExp(q as string, 'i') } },
-        { 'address.street': { $regex: new RegExp(q as string, 'i') } }
+        { name: { $regex: new RegExp(escapedQ, 'i') } },
+        { 'address.city': { $regex: new RegExp(escapedQ, 'i') } },
+        { 'address.street': { $regex: new RegExp(escapedQ, 'i') } }
       ];
     }
 
@@ -276,7 +340,7 @@ app.get('/api/v1/shops/search', async (req, res) => {
     // If searching by service name, filter shops that have a matching service
     if (service) {
       const shopIds = await Service.distinct('shopId', {
-        name: { $regex: new RegExp(service as string, 'i') }, isActive: true
+        name: { $regex: new RegExp(escapeRegExp(service as string), 'i') }, isActive: true
       });
       shops = shops.filter(s => shopIds.some((id: Types.ObjectId) => id.toString() === (s._id as Types.ObjectId).toString()));
     }
@@ -631,7 +695,16 @@ app.get('/api/v1/admin/:shopId/bookings', authenticateUser, requireRoles('shop_a
 });
 
 // Update booking status
-app.put('/api/v1/admin/:shopId/bookings/:bookingId/status', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
+app.put('/api/v1/admin/:shopId/bookings/:bookingId/status', 
+  authenticateUser, 
+  requireRoles('shop_admin', 'super_admin'), 
+  verifyTenantAccess, 
+  [
+    body('status').isIn(['pending', 'confirmed', 'paid', 'cancelled_by_customer', 'cancelled_by_shop', 'rescheduled', 'completed', 'no_show'])
+      .withMessage('Ogiltig status.'),
+  ],
+  validateRequest,
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { status } = req.body;
     const booking = await Booking.findOneAndUpdate(
@@ -643,6 +716,15 @@ app.put('/api/v1/admin/:shopId/bookings/:bookingId/status', authenticateUser, re
       { new: true }
     );
     if (!booking) return res.status(404).json({ error: 'Bokning hittades inte.' });
+
+    await AuditLog.create({
+      shopId: new Types.ObjectId(req.params.shopId),
+      userId: new Types.ObjectId(req.user!.userId),
+      action: 'booking_status_updated',
+      details: { bookingId: req.params.bookingId, status },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
 
     // Send cancellation email in the background if status is changed to cancelled
     if (status === 'cancelled_by_customer' || status === 'cancelled_by_shop') {
@@ -684,7 +766,18 @@ app.get('/api/v1/admin/:shopId/services', authenticateUser, requireRoles('shop_a
 });
 
 // Create service
-app.post('/api/v1/admin/:shopId/services', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, checkSubscriptionActive, async (req: AuthenticatedRequest, res: Response) => {
+app.post('/api/v1/admin/:shopId/services', 
+  authenticateUser, 
+  requireRoles('shop_admin', 'super_admin'), 
+  verifyTenantAccess, 
+  checkSubscriptionActive, 
+  [
+    body('name').notEmpty().withMessage('Namn krävs.'),
+    body('durationMinutes').isInt({ min: 1 }).withMessage('Ogiltig tid.'),
+    body('price').isFloat({ min: 0 }).withMessage('Ogiltigt pris.'),
+  ],
+  validateRequest,
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, description, durationMinutes, price } = req.body;
     const service = new Service({
@@ -692,6 +785,16 @@ app.post('/api/v1/admin/:shopId/services', authenticateUser, requireRoles('shop_
       name, description, durationMinutes, price, isActive: true
     });
     await service.save();
+
+    await AuditLog.create({
+      shopId: new Types.ObjectId(req.params.shopId),
+      userId: new Types.ObjectId(req.user!.userId),
+      action: 'service_created',
+      details: { serviceId: service._id, name },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
+
     return res.status(201).json({ service });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte skapa tjänst.' });
@@ -705,6 +808,16 @@ app.put('/api/v1/admin/:shopId/services/:serviceId/toggle', authenticateUser, re
     if (!service) return res.status(404).json({ error: 'Tjänst hittades inte.' });
     service.isActive = !service.isActive;
     await service.save();
+
+    await AuditLog.create({
+      shopId: new Types.ObjectId(req.params.shopId),
+      userId: new Types.ObjectId(req.user!.userId),
+      action: 'service_toggled',
+      details: { serviceId: req.params.serviceId, isActive: service.isActive },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
+
     return res.json({ service });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte ändra tjänststatus.' });
@@ -733,7 +846,19 @@ app.get('/api/v1/admin/:shopId/barbers', authenticateUser, requireRoles('shop_ad
 });
 
 // Add barber
-app.post('/api/v1/admin/:shopId/barbers', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, checkSubscriptionActive, async (req: AuthenticatedRequest, res: Response) => {
+app.post('/api/v1/admin/:shopId/barbers', 
+  authenticateUser, 
+  requireRoles('shop_admin', 'super_admin'), 
+  verifyTenantAccess, 
+  checkSubscriptionActive, 
+  [
+    body('email').isEmail().withMessage('Ogiltig e-postadress.'),
+    body('password').isLength({ min: 6 }).withMessage('Lösenordet måste vara minst 6 tecken.'),
+    body('firstName').notEmpty().withMessage('Förnamn krävs.'),
+    body('lastName').notEmpty().withMessage('Efternamn krävs.'),
+  ],
+  validateRequest,
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { email, password, firstName, lastName, bio, serviceIds } = req.body;
     const shopId = new Types.ObjectId(req.params.shopId);
@@ -752,6 +877,15 @@ app.post('/api/v1/admin/:shopId/barbers', authenticateUser, requireRoles('shop_a
       isActive: true
     });
     await profile.save();
+
+    await AuditLog.create({
+      shopId,
+      userId: new Types.ObjectId(req.user!.userId),
+      action: 'barber_added',
+      details: { barberId: profile._id, email },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
 
     return res.status(201).json({ message: 'Frisör tillagd!', barber: { name: `${firstName} ${lastName}`, email } });
   } catch (error) {
@@ -797,6 +931,16 @@ app.put('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_a
       { $set: { cancellationWindowHours, allowRescheduling, depositPercentage, paymentMethods, acceptedPaymentMethods, openingHours } },
       { new: true }
     );
+
+    await AuditLog.create({
+      shopId: new Types.ObjectId(req.params.shopId),
+      userId: new Types.ObjectId(req.user!.userId),
+      action: 'settings_updated',
+      details: { cancellationWindowHours, depositPercentage },
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown'
+    });
+
     return res.json({ settings });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte spara inställningar.' });
@@ -868,7 +1012,14 @@ app.get('/api/v1/super/shops', authenticateUser, requireRoles('super_admin'), as
 });
 
 // Suspend / Reactivate shop
-app.put('/api/v1/super/shops/:shopId/status', authenticateUser, requireRoles('super_admin'), async (req: AuthenticatedRequest, res: Response) => {
+app.put('/api/v1/super/shops/:shopId/status', 
+  authenticateUser, 
+  requireRoles('super_admin'), 
+  [
+    body('action').isIn(['suspend', 'reactivate']).withMessage('Ogiltig åtgärd.'),
+  ],
+  validateRequest,
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { action } = req.body; // 'suspend' | 'reactivate'
     const shopId = new Types.ObjectId(req.params.shopId);
@@ -977,17 +1128,24 @@ app.post('/api/v1/billing/webhook', async (req: any, res: Response) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   let event: any;
 
+  // Critical Security: Webhook secret MUST be configured
+  if (!webhookSecret) {
+    console.error('❌ STRIPE_WEBHOOK_SECRET is missing. Rejecting webhook.');
+    return res.status(500).json({ error: 'Webhook configuration missing' });
+  }
+
+  // Critical Security: Reject requests without signature or raw body
+  if (!signature || !req.rawBody) {
+    console.warn('⚠️ Webhook received without signature or rawBody.');
+    return res.status(400).send('Webhook Error: Missing signature or raw body');
+  }
+
   try {
-    if (webhookSecret && signature && req.rawBody) {
-      event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        signature as string,
-        webhookSecret
-      );
-    } else {
-      console.warn('⚠️ Webhook körs utan signaturverifiering (Bypass/Dev-läge).');
-      event = req.body;
-    }
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      signature as string,
+      webhookSecret
+    );
   } catch (err: any) {
     console.error(`❌ Stripe Webhook signaturfel: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);

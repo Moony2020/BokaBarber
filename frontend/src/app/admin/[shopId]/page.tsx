@@ -128,12 +128,31 @@ export default function ShopAdminDashboard() {
     }
   }, [shopId]);
 
-  // Auth check
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) { router.push('/login'); return; }
-    const user = JSON.parse(userStr);
-    if (user.role !== 'shop_admin' && user.role !== 'super_admin') { router.push('/'); }
+    const verifyAuth = async (isInitial = false) => {
+      try {
+        const res = await api.me();
+        if (res.ok) {
+          const data = res.data as { user: { role: string; shopId?: string } };
+          if (data.user.role !== 'shop_admin' && data.user.role !== 'super_admin') {
+            router.push('/');
+          }
+        } else {
+          if (isInitial || res.status === 401 || res.status === 403) {
+            router.push('/login');
+          }
+        }
+      } catch (err) {
+        console.error('Auth verification failed', err);
+        if (isInitial) {
+          router.push('/login');
+        }
+      }
+    };
+    verifyAuth(true);
+
+    const authCheckInterval = setInterval(() => verifyAuth(false), 30000);
+    return () => clearInterval(authCheckInterval);
   }, [router]);
 
   // Load data based on active tab
