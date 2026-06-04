@@ -1751,11 +1751,12 @@ section[id] {
   .home-container .pricing-grid {
     flex-direction: row;
     align-items: stretch;
+    justify-content: center;
   }
 
   .home-container .pricing-card {
     flex: 1;
-    max-width: none;
+    max-width: 420px;
   }
 }
 
