@@ -109,7 +109,7 @@
 
 html, body {
   min-height: 100vh;
-  min-width: 350px;
+  min-width: 320px;
   font-family: var(--font-secondary);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -2494,6 +2494,10 @@ body:has(.public-navbar) .sok-page .sok-hero {
 }
 
 @media (max-width: 480px) {
+  .home-container .hero-content {
+    padding: 28px 12px;
+  }
+
   .home-container .hero-title {
     font-size: 2.1rem;
     line-height: 1.2;
@@ -2507,6 +2511,8 @@ body:has(.public-navbar) .sok-page .sok-hero {
   }
 
   .home-container .hero-actions {
+    align-self: stretch;
+    width: 100%;
     gap: 10px;
     margin-bottom: 24px;
   }
@@ -2516,11 +2522,22 @@ body:has(.public-navbar) .sok-page .sok-hero {
     width: 100%;
     padding: 12px 14px;
     font-size: 0.9rem;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
   }
 
   .home-container .hero-stats-row {
-    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     padding-top: 16px;
+  }
+
+  .home-container .hero-stat-item {
+    min-width: 0;
+    width: 100%;
+    padding: 12px 14px;
   }
 
   .home-container .stat-number {

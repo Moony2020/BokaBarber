@@ -28,7 +28,7 @@ const seedDatabase = async () => {
     // 2. Skapa abonnemangsplaner
     const planBas = await new Plan({
       name: 'Bas',
-      priceMonthly: 499,
+      priceMonthly: 299,
       stripePriceId: 'price_bas_placeholder',
       features: ['Upp till 3 frisörer', 'Onlinebokning', 'E-postpåminnelser'],
       maxBarbers: 3
@@ -36,7 +36,7 @@ const seedDatabase = async () => {
 
     const planPro = await new Plan({
       name: 'Professional',
-      priceMonthly: 999,
+      priceMonthly: 399,
       stripePriceId: 'price_pro_placeholder',
       features: ['Obegränsat antal frisörer', 'Onlinebokning', 'E-postpåminnelser', 'SMS-påminnelser', 'Intäktsstatistik'],
       maxBarbers: 99
