@@ -29,6 +29,45 @@ export default function HomePage() {
     }
   ];
 
+  const compareFeatures = [
+    {
+      feature: 'Bokningssystem',
+      bas: 'check',
+      professional: 'check',
+    },
+    {
+      feature: 'Digital kalender',
+      bas: 'check',
+      professional: 'check',
+    },
+    {
+      feature: 'SMS-påminnelser',
+      bas: 'check',
+      professional: 'check',
+    },
+    {
+      feature: 'Lagerhantering',
+      bas: 'dash',
+      professional: 'check',
+    },
+    {
+      feature: 'Ekonomisk rapportering',
+      bas: 'dash',
+      professional: 'check',
+    },
+    {
+      feature: 'Prioriterad support',
+      bas: 'dash',
+      professional: 'check',
+    },
+  ];
+
+  const renderComparisonValue = (value: string) => {
+    if (value === 'check') return <span className="comparison-check">✓</span>;
+    if (value === 'dash') return <span className="comparison-dash">-</span>;
+    return <span className="comparison-text">{value}</span>;
+  };
+
   return (
     <div className="public-theme home-container animate-fade-in">
 
@@ -36,14 +75,17 @@ export default function HomePage() {
       <section className="hero-section">
         <div className="hero-bg-overlay"></div>
         <div className="container hero-inner">
+          <div className="hero-mobile-image" aria-hidden="true"></div>
           <div className="hero-content">
-            <span className="badge-gold">FRAMTIDENS BARBERARSYSTEM</span>
-            <h1 className="hero-title">
-              Skandinavisk elegans för <span>high-end</span> salonger.
-            </h1>
-            <p className="hero-subtitle">
-              BokaBarber förenar traditionellt hantverk med modern SaaS-effektivitet. En exklusiv plattform skapad för att förädla din kundresa.
-            </p>
+            <div className="hero-copy-panel">
+              <span className="badge-gold">FRAMTIDENS BARBERARSYSTEM</span>
+              <h1 className="hero-title">
+                Skandinavisk elegans för <span>high-end</span> salonger.
+              </h1>
+              <p className="hero-subtitle">
+                BokaBarber förenar traditionellt hantverk med modern SaaS-effektivitet. En exklusiv plattform skapad för att förädla din kundresa.
+              </p>
+            </div>
 
             <div className="hero-actions">
               <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
@@ -56,12 +98,22 @@ export default function HomePage() {
 
             <div className="hero-stats-row">
               <div className="hero-stat-item">
-                <span className="stat-number">98%</span>
-                <span className="stat-label">KUNDLOJALITET</span>
+                <div className="stat-icon-wrapper">
+                  <i className="fa-solid fa-star"></i>
+                </div>
+                <div className="stat-info">
+                  <span className="stat-number">98%</span>
+                  <span className="stat-label">KUNDLOJALITET</span>
+                </div>
               </div>
               <div className="hero-stat-item">
-                <span className="stat-number">150+</span>
-                <span className="stat-label">PREMIUM SALONGER</span>
+                <div className="stat-icon-wrapper">
+                  <i className="fa-solid fa-crown"></i>
+                </div>
+                <div className="stat-info">
+                  <span className="stat-number">150+</span>
+                  <span className="stat-label">PREMIUM SALONGER</span>
+                </div>
               </div>
             </div>
           </div>
@@ -232,6 +284,35 @@ export default function HomePage() {
               <Link href="/registrera-salong?plan=pro" className="btn btn-primary plan-btn">
                 Starta Professional
               </Link>
+            </div>
+          </div>
+
+          <div className="pricing-compare-section">
+            <div className="pricing-compare-header text-center">
+              <h3 className="section-title">Jämför Funktioner</h3>
+            </div>
+
+            <div className="pricing-compare-shell">
+              <div className="pricing-compare-table-wrap">
+                <table className="pricing-compare-table">
+                  <thead>
+                    <tr>
+                      <th>Funktioner</th>
+                      <th>Bas</th>
+                      <th>Professional</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareFeatures.map((row) => (
+                      <tr key={row.feature}>
+                        <td>{row.feature}</td>
+                        <td>{renderComparisonValue(row.bas)}</td>
+                        <td>{renderComparisonValue(row.professional)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

@@ -75,19 +75,19 @@ app.use(cors({
 // Global Helmet Protection
 app.use(helmet());
 
-// Global Rate Limiter: 100 requests per 15 minutes per IP
+// Global Rate Limiter: 100 requests per 15 minutes per IP (loosened in development)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: isProduction ? 100 : 10000,
   message: { error: 'För många förfrågningar från denna IP-adress, försök igen om 15 minuter.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Stricter Auth Rate Limiter: 5 attempts per 15 minutes per IP
+// Stricter Auth Rate Limiter: 5 attempts per 15 minutes per IP (loosened in development)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: isProduction ? 5 : 1000,
   message: { error: 'För många inloggningsförsök eller registreringar. Försök igen om 15 minuter.' },
   standardHeaders: true,
   legacyHeaders: false,

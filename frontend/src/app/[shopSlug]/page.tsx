@@ -115,6 +115,7 @@ export default function ShopBookingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pageErrorKind, setPageErrorKind] = useState<'not_found' | 'temporary' | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bookingDone, setBookingDone] = useState(false);
   const [confirmationData, setConfirmationData] = useState<BookingConfirmationData | null>(null);
@@ -146,29 +147,49 @@ export default function ShopBookingPage() {
   const hasHydratedBookingStateRef = React.useRef(false);
 
   // Load shop data
-  useEffect(() => {
-    const loadShop = async () => {
-      setLoading(true);
-      try {
-        const res = await api.getShopBySlug(slug);
-        if (res.ok) {
-          const d = res.data as { shop: ShopData; settings?: { acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[] }; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
-          setShop(d.shop);
-          setSettings(d.settings || null);
-          setServices(d.services || []);
-          setBarbers(d.barbers || []);
-          setStatusFlag(d.statusFlag || 'ready');
-        } else {
-          setError('Salongen hittades inte.');
-        }
-      } catch {
-        setError('Kunde inte ladda salongsinformation.');
-      } finally {
-        setLoading(false);
+  const loadShop = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    setPageErrorKind(null);
+
+    try {
+      const res = await api.getShopBySlug(slug);
+      if (res.ok) {
+        const d = res.data as { shop: ShopData; settings?: { acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[] }; services: ServiceData[]; barbers: BarberData[]; statusFlag: 'ready' | 'not_ready' | 'suspended' };
+        setShop(d.shop);
+        setSettings(d.settings || null);
+        setServices(d.services || []);
+        setBarbers(d.barbers || []);
+        setStatusFlag(d.statusFlag || 'ready');
+        return;
       }
-    };
-    loadShop();
+
+      setShop(null);
+
+      if (res.status === 404) {
+        setPageErrorKind('not_found');
+        setError('Salongen hittades inte.');
+      } else if (res.status === 429) {
+        setPageErrorKind('temporary');
+        setError('För många förfrågningar just nu. Försök igen om en liten stund.');
+      } else {
+        setPageErrorKind('temporary');
+        setError('Kunde inte ladda salongsinformationen just nu.');
+      }
+    } catch {
+      setShop(null);
+      setPageErrorKind('temporary');
+      setError('Kunde inte ladda salongsinformationen just nu.');
+    } finally {
+      setLoading(false);
+    }
   }, [slug]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadShop();
+    });
+  }, [loadShop]);
 
   // Fetch upcoming quick slots for today and tomorrow dynamically
   useEffect(() => {
@@ -194,6 +215,7 @@ export default function ShopBookingPage() {
           const now = new Date();
           const currentHour = now.getHours();
           const currentMin = now.getMinutes();
+
           
           const futureSlots = slotsToday.filter(s => {
             const [h, m] = s.split(':').map(Number);
@@ -274,7 +296,7 @@ export default function ShopBookingPage() {
       loadSlots();
     }, 0);
     return () => clearTimeout(timer);
-  }, [loadSlots]);
+  }, [selectedBarber?._id, selectedDate, selectedService?._id, step, shop?._id, loadSlots]);
 
   useEffect(() => {
     const storedBooking = localStorage.getItem(bookingStorageKey);
@@ -291,7 +313,7 @@ export default function ShopBookingPage() {
         frameId = window.requestAnimationFrame(() => {
           setSelectedService(parsed.selectedService || null);
           setSelectedBarber(parsed.selectedBarber || null);
-          setSelectedDate(parsed.selectedDate || selectedDate);
+          setSelectedDate(prev => parsed.selectedDate || prev);
           setSelectedTime(parsed.selectedTime || '');
           setCustomerForm(parsed.customerForm || INITIAL_CUSTOMER_FORM);
           setStep(parsed.step || 1);
@@ -307,7 +329,7 @@ export default function ShopBookingPage() {
         window.cancelAnimationFrame(frameId);
       }
     };
-  }, [bookingStorageKey, selectedDate, slug]);
+  }, [bookingStorageKey, slug]);
 
   useEffect(() => {
     if (!hasHydratedBookingStateRef.current) return;
@@ -447,10 +469,16 @@ export default function ShopBookingPage() {
     return (
       <div className="booking-error public-theme animate-fade-in">
         <h2>⚠️ {error}</h2>
-        <p>Kontrollera att webbadressen är korrekt eller sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary mt-24">
-          Sök salonger
-        </Link>
+        <p>{pageErrorKind === 'not_found' ? 'Kontrollera att webbadressen är korrekt eller sök efter andra salonger.' : 'Det verkar vara ett tillfälligt problem. Försök igen om en liten stund.'}</p>
+        {pageErrorKind === 'not_found' ? (
+          <Link href="/sok" className="btn btn-primary mt-24">
+            Sök salonger
+          </Link>
+        ) : (
+          <button onClick={() => void loadShop()} className="btn btn-primary mt-24" type="button">
+            Försök igen
+          </button>
+        )}
         <style jsx>{`
 
         .w-step-1 { width: 0%; }
