@@ -30,7 +30,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
-      <body className={`${playfairDisplay.variable} ${plusJakartaSans.variable}`}>
+      <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
+      <body suppressHydrationWarning className={`${playfairDisplay.variable} ${plusJakartaSans.variable}`}>
         <div className="app-layout">
           <Navbar />
           <main className="main-content">

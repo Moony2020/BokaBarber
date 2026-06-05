@@ -65,6 +65,17 @@ const seedDatabase = async () => {
 
     // 4. Skapa testsalong om den inte redan finns
     let existingShop = await Shop.findOne({ slug: 'royal-cuts' });
+    if (existingShop) {
+      console.log('🧹 Tar bort befintlig testsalong "royal-cuts" för åter-sådd...');
+      await ShopSettings.deleteMany({ shopId: existingShop._id });
+      await Service.deleteMany({ shopId: existingShop._id });
+      await User.deleteMany({ shopId: existingShop._id });
+      await BarberProfile.deleteMany({ shopId: existingShop._id });
+      await Subscription.deleteMany({ shopId: existingShop._id });
+      await Shop.deleteOne({ _id: existingShop._id });
+      existingShop = null;
+    }
+
     if (!existingShop) {
       console.log('💈 Skapar testsalongen "Royal Cuts"...');
 
@@ -94,9 +105,9 @@ const seedDatabase = async () => {
       }).save();
 
       // Tjänster
-      const svc1 = await new Service({ shopId: shop._id, name: 'Herrklippning', description: 'Klassisk herrklippning inklusive tvätt och styling.', durationMinutes: 30, price: 450 }).save();
-      const svc2 = await new Service({ shopId: shop._id, name: 'Skäggtrimning Deluxe', description: 'Trimning av skägg med kniv, varma omslag och skäggolja.', durationMinutes: 30, price: 350 }).save();
-      await new Service({ shopId: shop._id, name: 'Klippning & Skägg Paket', description: 'Vårt mest populära kombipaket.', durationMinutes: 60, price: 700 }).save();
+      const svc1 = await new Service({ shopId: shop._id, name: 'Herrklippning', description: 'Klassisk herrklippning inklusive tvätt och styling.', durationMinutes: 30, price: 250 }).save();
+      const svc2 = await new Service({ shopId: shop._id, name: 'Skäggtrimning Deluxe', description: 'Trimning av skägg med kniv, varma omslag och skäggolja.', durationMinutes: 30, price: 150 }).save();
+      await new Service({ shopId: shop._id, name: 'Klippning & Skägg Paket', description: 'Vårt mest populära kombipaket.', durationMinutes: 60, price: 380 }).save();
 
       // Shop Admin
       const salt1 = await bcrypt.genSalt(12);
@@ -149,12 +160,21 @@ const seedDatabase = async () => {
       console.log('   Frisör 2: maria@royalcuts.se / Frisor123!');
 
       existingShop = shop;
-    } else {
-      console.log('ℹ Testsalongen "royal-cuts" finns redan.');
     }
 
     // 5. Skapa en andra salong för att visa sök-funktionen
-    const existingShop2 = await Shop.findOne({ slug: 'barber-co' });
+    let existingShop2 = await Shop.findOne({ slug: 'barber-co' });
+    if (existingShop2) {
+      console.log('🧹 Tar bort befintlig testsalong "barber-co" för åter-sådd...');
+      await ShopSettings.deleteMany({ shopId: existingShop2._id });
+      await Service.deleteMany({ shopId: existingShop2._id });
+      await User.deleteMany({ shopId: existingShop2._id });
+      await BarberProfile.deleteMany({ shopId: existingShop2._id });
+      await Subscription.deleteMany({ shopId: existingShop2._id });
+      await Shop.deleteOne({ _id: existingShop2._id });
+      existingShop2 = null;
+    }
+
     if (!existingShop2) {
       const shop2 = await new Shop({
         name: 'Barber & Co', slug: 'barber-co',
@@ -175,8 +195,8 @@ const seedDatabase = async () => {
         ]
       }).save();
 
-      await new Service({ shopId: shop2._id, name: 'Fade Klippning', description: 'Modern fade med ren linje.', durationMinutes: 45, price: 500 }).save();
-      await new Service({ shopId: shop2._id, name: 'Skägg Trim', description: 'Snabb skäggtrimning.', durationMinutes: 20, price: 250 }).save();
+      await new Service({ shopId: shop2._id, name: 'Fade Klippning', description: 'Modern fade med ren linje.', durationMinutes: 45, price: 290 }).save();
+      await new Service({ shopId: shop2._id, name: 'Skägg Trim', description: 'Snabb skäggtrimning.', durationMinutes: 20, price: 150 }).save();
 
       const salt4 = await bcrypt.genSalt(12);
       const owner2Hash = await bcrypt.hash('ShopAdmin123!', salt4);

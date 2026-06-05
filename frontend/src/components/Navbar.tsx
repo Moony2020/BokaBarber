@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/utils/api';
@@ -22,6 +22,22 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super');
+  const navbarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (navbarRef.current && !navbarRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -34,7 +50,7 @@ export default function Navbar() {
     const handleScroll = () => {
       // Trigger area offset for sticky header height
       const scrollPosition = window.scrollY + 120;
-      const sections = ['funktioner', 'priser'];
+      const sections = ['funktioner', 'priser', 'design', 'faq'];
       let found = false;
 
       for (const sectionId of sections) {
@@ -58,9 +74,19 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     handleScroll();
 
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMenuOpen(prev => prev ? false : prev);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
     };
   }, [pathname]);
 
@@ -116,7 +142,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}`}>
+    <header ref={navbarRef} className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}${menuOpen ? ' menu-open' : ''}`}>
       <div className="container navbar-inner">
         <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
           <svg className="barber-logo-icon navbar-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,15 +158,10 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="navbar-nav">
-          <Link href="/sok" className={`nav-link ${pathname === '/sok' ? 'active' : ''}`}>Tjänster</Link>
-          <Link href="/#priser" className={`nav-link ${activeHash === '#priser' ? 'active' : ''}`}>Priser</Link>
-          <Link href="/#funktioner" className={`nav-link ${activeHash === '#funktioner' ? 'active' : ''}`}>Om oss</Link>
-          
-          {!user && (
-            <Link href="/registrera-salong" className={`nav-link nav-highlight ${pathname === '/registrera-salong' ? 'active' : ''}`}>
-              Anslut salong
-            </Link>
-          )}
+          <Link href="/#funktioner" className={`nav-link ${activeHash === '#funktioner' ? 'active' : ''}`}>Funktioner</Link>
+          <Link href="/#priser" className={`nav-link ${activeHash === '#priser' ? 'active' : ''}`}>Prissättning</Link>
+          <Link href="/#design" className={`nav-link ${activeHash === '#design' ? 'active' : ''}`}>Design</Link>
+          <Link href="/#faq" className={`nav-link ${activeHash === '#faq' ? 'active' : ''}`}>Om Oss</Link>
         </nav>
 
         <div className="navbar-actions">
@@ -160,11 +181,13 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            <Link href="/login" className="btn btn-primary btn-booking-nav" aria-label="Logga in">
-              <span className="login-text">Logga in</span>
-              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
+            <Link href="/sok" className="btn btn-primary btn-booking-nav" aria-label="Boka nu">
+              <span className="login-text">Boka Nu</span>
+              <svg className="booking-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </Link>
           )}
@@ -181,35 +204,31 @@ export default function Navbar() {
             <span></span>
           </button>
         </div>
-      </div>
 
-      {/* Mobile Menu Panel */}
-      {menuOpen && (
-        <div className={`mobile-nav-panel animate-fade-in ${isDashboard ? 'dashboard-mobile-nav' : 'public-mobile-nav'}`}>
-          <Link href="/sok" className={`mobile-link ${pathname === '/sok' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Tjänster</Link>
-          <Link href="/#priser" className={`mobile-link ${activeHash === '#priser' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Priser</Link>
-          <Link href="/#funktioner" className={`mobile-link ${activeHash === '#funktioner' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Om oss</Link>
-          {!user && (
-            <Link href="/registrera-salong" className={`mobile-link mobile-highlight ${pathname === '/registrera-salong' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
-              Anslut salong (14 dagar gratis)
-            </Link>
-          )}
-          {user ? (
-            <>
-              <Link href={getDashboardLink()} className="mobile-link" onClick={() => setMenuOpen(false)}>
-                Instrumentpanel ({user.firstName})
+        {/* Mobile Menu Panel */}
+        {menuOpen && (
+          <div className={`mobile-nav-panel animate-fade-in ${isDashboard ? 'dashboard-mobile-nav' : 'public-mobile-nav'}`}>
+            <Link href="/#funktioner" className={`mobile-link ${activeHash === '#funktioner' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Funktioner</Link>
+            <Link href="/#priser" className={`mobile-link ${activeHash === '#priser' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Prissättning</Link>
+            <Link href="/#design" className={`mobile-link ${activeHash === '#design' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Design</Link>
+            <Link href="/#faq" className={`mobile-link ${activeHash === '#faq' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Om Oss</Link>
+            {user ? (
+              <>
+                <Link href={getDashboardLink()} className="mobile-link" onClick={() => setMenuOpen(false)}>
+                  Instrumentpanel ({user.firstName})
+                </Link>
+                <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="mobile-logout-btn">
+                  Logga ut
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="mobile-login-btn" onClick={() => setMenuOpen(false)}>
+                Logga in
               </Link>
-              <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="mobile-logout-btn">
-                Logga ut
-              </button>
-            </>
-          ) : (
-            <Link href="/login" className="mobile-login-btn" onClick={() => setMenuOpen(false)}>
-              Logga in
-            </Link>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
 
     </header>
   );

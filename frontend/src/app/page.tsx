@@ -49,9 +49,9 @@ export default function HomePage() {
               <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
                 Starta din 14-dagars gratis provperiod
               </Link>
-              <a href="#funktioner" className="btn btn-outline btn-hero-outline">
+              <Link href="/royal-cuts" className="btn btn-outline btn-hero-outline">
                 Se demo
-              </a>
+              </Link>
             </div>
 
             <div className="hero-stats-row">
