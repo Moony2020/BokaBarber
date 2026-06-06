@@ -1,10 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  const slides = [
+    '/slide1.webp',
+    '/slide2.webp',
+    '/slide3.webp'
+  ];
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -73,47 +87,90 @@ export default function HomePage() {
 
       {/* 👑 HERO SECTION WITH FULL-WIDTH BACKGROUND MOCKUP */}
       <section className="hero-section">
+        <div className="hero-slides-container">
+          {slides.map((slide, index) => (
+            <div
+              key={slide}
+              className={`hero-slide ${currentSlide === index ? 'active' : ''}`}
+              style={{ backgroundImage: `url(${slide})` }}
+            />
+          ))}
+        </div>
         <div className="hero-bg-overlay"></div>
         <div className="container hero-inner">
-          <div className="hero-mobile-image" aria-hidden="true"></div>
-          <div className="hero-content">
-            <div className="hero-copy-panel">
-              <span className="badge-gold">FRAMTIDENS BARBERARSYSTEM</span>
-              <h1 className="hero-title">
-                Skandinavisk elegans för <span>high-end</span> salonger.
-              </h1>
-              <p className="hero-subtitle">
-                BokaBarber förenar traditionellt hantverk med modern SaaS-effektivitet. En exklusiv plattform skapad för att förädla din kundresa.
-              </p>
+          <div className="hero-mobile-image-container">
+            {slides.map((slide, index) => (
+              <div
+                key={slide}
+                className={`hero-mobile-slide ${currentSlide === index ? 'active' : ''}`}
+                style={{ backgroundImage: `url(${slide})` }}
+              />
+            ))}
+            <div className="hero-slider-dots mobile-only-dots">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  className={`slider-dot ${currentSlide === index ? 'active' : ''}`}
+                  onClick={() => setCurrentSlide(index)}
+                  aria-label={`Gå till slide ${index + 1}`}
+                />
+              ))}
             </div>
-
-            <div className="hero-actions">
-              <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
-                Starta din 14-dagars gratis provperiod
-              </Link>
-              <Link href="/royal-cuts" className="btn btn-outline btn-hero-outline">
-                Se demo
-              </Link>
-            </div>
-
-            <div className="hero-stats-row">
-              <div className="hero-stat-item">
-                <div className="stat-icon-wrapper">
-                  <i className="fa-solid fa-star"></i>
-                </div>
-                <div className="stat-info">
-                  <span className="stat-number">98%</span>
-                  <span className="stat-label">KUNDLOJALITET</span>
-                </div>
+          </div>
+          
+          {/* Wrapper for hero content */}
+          <div className="hero-content-wrapper">
+            <div className="hero-content">
+              {/* Desktop Dots */}
+              <div className="hero-slider-dots desktop-only-dots">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`slider-dot ${currentSlide === index ? 'active' : ''}`}
+                    onClick={() => setCurrentSlide(index)}
+                    aria-label={`Gå till slide ${index + 1}`}
+                  />
+                ))}
               </div>
-              <div className="hero-stat-item">
-                <div className="stat-icon-wrapper">
-                  <i className="fa-solid fa-crown"></i>
-                </div>
-                <div className="stat-info">
-                  <span className="stat-number">150+</span>
-                  <span className="stat-label">PREMIUM SALONGER</span>
-                </div>
+              <div className="hero-copy-panel">
+                <span className="badge-gold">FRAMTIDENS BARBERARSYSTEM</span>
+                <h1 className="hero-title">
+                  Skandinavisk elegans för <span>high-end</span> salonger.
+                </h1>
+                <p className="hero-subtitle">
+                  BokaBarber förenar traditionellt hantverk med modern SaaS-effektivitet. En exklusiv plattform skapad för att förädla din kundresa.
+                </p>
+              </div>
+
+              <div className="hero-actions">
+                <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
+                  Starta din 14-dagars gratis provperiod
+                </Link>
+                <Link href="/royal-cuts" className="btn btn-outline btn-hero-outline">
+                  Se demo
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-stats-row">
+            <div className="hero-stat-item">
+              <div className="stat-icon-wrapper">
+                <i className="fa-solid fa-star"></i>
+              </div>
+              <div className="stat-info">
+                <span className="stat-number">98%</span>
+                <span className="stat-label">KUNDLOJALITET</span>
+              </div>
+            </div>
+
+            <div className="hero-stat-item">
+              <div className="stat-icon-wrapper">
+                <i className="fa-solid fa-crown"></i>
+              </div>
+              <div className="stat-info">
+                <span className="stat-number">150+</span>
+                <span className="stat-label">PREMIUM SALONGER</span>
               </div>
             </div>
           </div>

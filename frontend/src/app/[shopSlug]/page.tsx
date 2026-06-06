@@ -447,20 +447,11 @@ export default function ShopBookingPage() {
   if (loading) {
     return (
       <div className="booking-loading public-theme animate-fade-in">
-        <div className="spinner"></div>
-        <p>Laddar salongsinformation...</p>
-        <style jsx>{`
-
-        .w-step-1 { width: 0%; }
-        .w-step-2 { width: 25%; }
-        .w-step-3 { width: 50%; }
-        .w-step-4 { width: 75%; }
-        .w-step-5 { width: 100%; }
-
-          .booking-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 16px; background-color: var(--bg-primary); }
-          .spinner { width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
+        <div className="booking-state-card">
+          <div className="spinner"></div>
+          <h2 className="booking-state-title">Laddar salongsinformation...</h2>
+          <p className="booking-state-text">Hämtar salong, tjänster och lediga tider.</p>
+        </div>
       </div>
     );
   }
@@ -468,29 +459,19 @@ export default function ShopBookingPage() {
   if (error && !shop) {
     return (
       <div className="booking-error public-theme animate-fade-in">
-        <h2>⚠️ {error}</h2>
-        <p>{pageErrorKind === 'not_found' ? 'Kontrollera att webbadressen är korrekt eller sök efter andra salonger.' : 'Det verkar vara ett tillfälligt problem. Försök igen om en liten stund.'}</p>
-        {pageErrorKind === 'not_found' ? (
-          <Link href="/sok" className="btn btn-primary mt-24">
-            Sök salonger
-          </Link>
-        ) : (
-          <button onClick={() => void loadShop()} className="btn btn-primary mt-24" type="button">
-            Försök igen
-          </button>
-        )}
-        <style jsx>{`
-
-        .w-step-1 { width: 0%; }
-        .w-step-2 { width: 25%; }
-        .w-step-3 { width: 50%; }
-        .w-step-4 { width: 75%; }
-        .w-step-5 { width: 100%; }
-
-          .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
-          .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
-          .booking-error p { color: var(--text-secondary); }
-        `}</style>
+        <div className="booking-state-card">
+          <h2 className="booking-state-title">⚠️ {error}</h2>
+          <p className="booking-state-text">{pageErrorKind === 'not_found' ? 'Kontrollera att webbadressen är korrekt eller sök efter andra salonger.' : 'Det verkar vara ett tillfälligt problem. Försök igen om en liten stund.'}</p>
+          {pageErrorKind === 'not_found' ? (
+            <Link href="/sok" className="btn btn-primary mt-24">
+              Sök salonger
+            </Link>
+          ) : (
+            <button onClick={() => void loadShop()} className="btn btn-primary mt-24" type="button">
+              Försök igen
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -498,23 +479,13 @@ export default function ShopBookingPage() {
   if (statusFlag === 'suspended') {
     return (
       <div className="booking-error public-theme animate-fade-in">
-        <h2>Denna salong tar inte emot bokningar just nu</h2>
-        <p>Återkom gärna vid ett senare tillfälle eller sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary mt-24">
-          Sök salonger
-        </Link>
-        <style jsx>{`
-
-        .w-step-1 { width: 0%; }
-        .w-step-2 { width: 25%; }
-        .w-step-3 { width: 50%; }
-        .w-step-4 { width: 75%; }
-        .w-step-5 { width: 100%; }
-
-          .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
-          .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
-          .booking-error p { color: var(--text-secondary); }
-        `}</style>
+        <div className="booking-state-card">
+          <h2 className="booking-state-title">Denna salong tar inte emot bokningar just nu</h2>
+          <p className="booking-state-text">Återkom gärna vid ett senare tillfälle eller sök efter andra salonger.</p>
+          <Link href="/sok" className="btn btn-primary mt-24">
+            Sök salonger
+          </Link>
+        </div>
       </div>
     );
   }
@@ -522,23 +493,13 @@ export default function ShopBookingPage() {
   if (statusFlag === 'not_ready') {
     return (
       <div className="booking-error public-theme animate-fade-in">
-        <h2>Denna salong är inte redo att ta emot bokningar ännu</h2>
-        <p>Administratören håller på att ställa in salongen. Sök efter andra salonger.</p>
-        <Link href="/sok" className="btn btn-primary mt-24">
-          Sök salonger
-        </Link>
-        <style jsx>{`
-
-        .w-step-1 { width: 0%; }
-        .w-step-2 { width: 25%; }
-        .w-step-3 { width: 50%; }
-        .w-step-4 { width: 75%; }
-        .w-step-5 { width: 100%; }
-
-          .booking-error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; gap: 12px; background-color: var(--bg-primary); padding: 24px; }
-          .booking-error h2 { font-family: var(--font-primary); font-size: 2rem; color: var(--primary); }
-          .booking-error p { color: var(--text-secondary); }
-        `}</style>
+        <div className="booking-state-card">
+          <h2 className="booking-state-title">Denna salong är inte redo att ta emot bokningar ännu</h2>
+          <p className="booking-state-text">Administratören håller på att ställa in salongen. Sök efter andra salonger.</p>
+          <Link href="/sok" className="btn btn-primary mt-24">
+            Sök salonger
+          </Link>
+        </div>
       </div>
     );
   }
