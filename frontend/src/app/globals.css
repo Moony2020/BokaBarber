@@ -1392,7 +1392,8 @@ body:has(.public-navbar) .sok-page .sok-hero {
   bottom: auto !important;
   left: auto !important;
   transform: none !important;
-  margin: 0 auto 6px !important;
+  align-self: flex-end;
+  margin: 0 0 6px auto !important;
   z-index: 10;
 }
 
@@ -1527,6 +1528,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   letter-spacing: 1.4px;
   text-transform: uppercase;
   margin-bottom: 12px;
+  transform: translateY(2px);
   -webkit-backdrop-filter: blur(10px) saturate(1.05);
   backdrop-filter: blur(10px) saturate(1.05);
   box-shadow: 0 8px 20px rgba(197, 160, 89, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.52);
@@ -2589,6 +2591,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   font-weight: 700;
   letter-spacing: 1.5px;
   margin-bottom: 12px;
+  transform: translateY(2px);
 }
 
 .contact-page-container .contact-header h1 {
@@ -2927,6 +2930,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
     padding: 4px 12px !important;
     font-size: 0.68rem;
     margin-bottom: 14px;
+    transform: translateY(2px);
   }
 
   .home-container .hero-title {
@@ -3052,8 +3056,14 @@ body:has(.public-navbar) .sok-page .sok-hero {
 }
 
 @media (max-width: 768px) {
-  .home-container .hero-content {
-    margin: -136px auto 0;
+  .home-container .hero-content-wrapper {
+    margin: -126px auto 0;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .home-container .hero-content-wrapper {
+    margin: -172px auto 0;
   }
 }
 
@@ -3081,10 +3091,16 @@ body:has(.public-navbar) .sok-page .sok-hero {
     background-position: 68% center !important;
   }
 
+  .home-container .hero-content-wrapper {
+    max-width: min(520px, calc(100vw - 28px));
+    width: min(520px, calc(100vw - 28px));
+    margin: -112px auto 0;
+  }
+
   .home-container .hero-content {
     max-width: min(520px, calc(100vw - 28px));
     width: min(520px, calc(100vw - 28px));
-    margin: -114px auto 0;
+    margin: 0;
     align-self: center !important;
     padding: 8px 16px 18px;
     border-radius: 24px;
@@ -3141,6 +3157,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   .home-container .stat-label {
     font-size: 0.74rem !important;
   }
+
 
   .home-container .pricing-card {
     padding: 24px 20px !important;
@@ -3235,6 +3252,12 @@ body:has(.public-navbar) .sok-page .sok-hero {
   }
 }
 
+@media (max-width: 540px) {
+  .home-container .hero-content-wrapper {
+    margin: -104px auto 0;
+  }
+}
+
 @media (max-width: 600px) {
   .contact-page-container {
     padding: 40px 16px;
@@ -3259,10 +3282,16 @@ body:has(.public-navbar) .sok-page .sok-hero {
     margin-bottom: 0;
   }
 
+  .home-container .hero-content-wrapper {
+    max-width: min(480px, calc(100vw - 24px));
+    width: min(480px, calc(100vw - 24px));
+    margin: -92px auto 0;
+  }
+
   .home-container .hero-content {
     max-width: min(480px, calc(100vw - 24px));
     width: min(480px, calc(100vw - 24px));
-    margin: -68px auto 0;
+    margin: 0;
     align-self: center !important;
   }
 
