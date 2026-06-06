@@ -3219,6 +3219,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   .home-container .design-story-point h3 {
     font-size: 1.05rem;
     letter-spacing: 0.9px;
+    white-space: normal;
   }
 
   .home-container .design-story-point p {
