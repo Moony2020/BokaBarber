@@ -86,7 +86,7 @@ export default function HomePage() {
     <div className="public-theme home-container animate-fade-in">
 
       {/* 👑 HERO SECTION WITH FULL-WIDTH BACKGROUND MOCKUP */}
-      <section className="hero-section">
+      <section id="hero" className="hero-section">
         <div className="hero-slides-container">
           {slides.map((slide, index) => (
             <div
@@ -181,82 +181,92 @@ export default function HomePage() {
       <section id="funktioner" className="features-section">
         <div className="container">
           <div className="section-header text-center">
-            <h2 className="section-title">Precision i varje detalj</h2>
+            <h2 className="section-title">Exklusivitet i varje funktion</h2>
             <p className="section-subtitle">
-              Vi har digitaliserat de mest kritiska aspekterna av din verksamhet så att du kan fokusera på det du gör bäst: hantverket.
+              Vårt ekosystem är byggt för att eliminera friktion och förstärka din kundupplevelse.
             </p>
           </div>
 
-          <div className="grid-responsive mt-56" >
-            {/* Feature Card 1 */}
-            <div className="card-premium feature-card">
+          <div className="grid-responsive mt-56">
+            <div className="feature-card">
               <div className="feature-header">
-                <span className="feature-icon-box">📅</span>
-                <h3>Smart Kalender</h3>
-              </div>
-              <p>
-                En intuitiv schemaläggning som minimerar luckor och maximerar intäkter genom automatiserade optimeringsalgoritmer.
-              </p>
-              <div className="card-visual-calendar">
-                <div className="calendar-mini-grid">
-                  <div className="grid-cell filled-purple">Bokad</div>
-                  <div className="grid-cell filled-gold">Paus</div>
-                  <div className="grid-cell filled-purple">Bokad</div>
-                  <div className="grid-cell">Ledig</div>
+                <span className="material-symbols-outlined feature-icon-box" aria-hidden="true">calendar_month</span>
+                <div className="feature-copy">
+                  <h3>Smart Kalender</h3>
+                  <p>Intelligent schemahantering som förutser dina behov och optimerar dina luckor automatiskt.</p>
                 </div>
               </div>
             </div>
 
-            {/* Feature Card 2 */}
-            <div className="card-premium feature-card">
+            <div className="feature-card">
               <div className="feature-header">
-                <span className="feature-icon-box">👥</span>
-                <h3>Kundregister</h3>
-              </div>
-              <p>
-                Skapa personliga profiler med historik, preferenser och allergier. Ge varje kund den kungliga behandling de förväntar sig.
-              </p>
-              <div className="card-visual-avatars">
-                <div className="avatar-circles">
-                  <span className="avatar-circle purple-avatar">A</span>
-                  <span className="avatar-circle gold-avatar">M</span>
-                  <span className="avatar-circle count-avatar">+184</span>
+                <span className="material-symbols-outlined feature-icon-box" aria-hidden="true">group</span>
+                <div className="feature-copy">
+                  <h3>Kundregister</h3>
+                  <p>Lär känna dina stamgäster på djupet. Preferenser, historik och personliga noteringar på ett ställe.</p>
                 </div>
               </div>
             </div>
 
-            {/* Feature Card 3 */}
-            <div className="card-premium feature-card">
+            <div className="feature-card">
               <div className="feature-header">
-                <span className="feature-icon-box">💵</span>
-                <h3>Ekonomi & Rapporter</h3>
-              </div>
-              <p>
-                Full kontroll på kassaflöde, provisioner och lagervärde. Integrerat med ledande redovisningssystem.
-              </p>
-              <div className="card-visual-revenue">
-                <div className="visual-rev-bar">
-                  <div className="rev-progress w-82" ></div>
-                </div>
-                <div className="rev-labels">
-                  <span>MÅNADSBOKNINGAR</span>
-                  <span className="rev-growth">+12.4%</span>
+                <span className="material-symbols-outlined feature-icon-box" aria-hidden="true">payments</span>
+                <div className="feature-copy">
+                  <h3>Ekonomi & Rapporter</h3>
+                  <p>Analysera din tillväxt med kristallklar data. Insikter som hjälper dig fatta smartare affärsbeslut.</p>
                 </div>
               </div>
             </div>
 
-            {/* Feature Card 4 */}
-            <div className="card-premium feature-card">
+            <div className="feature-card">
               <div className="feature-header">
-                <span className="feature-icon-box">📦</span>
-                <h3>Smart Lagerhantering</h3>
+                <span className="material-symbols-outlined feature-icon-box" aria-hidden="true">inventory_2</span>
+                <div className="feature-copy">
+                  <h3>Smart Lagerhantering</h3>
+                  <p>Håll koll på dina exklusiva produkter. Automatiska varningar när det är dags att beställa nytt.</p>
+                </div>
               </div>
-              <p>
-                Slipp manuella inventeringar. Systemet varnar automatiskt när dina bästsäljande oljor eller vaxer börjar ta slut.
-              </p>
-              <div className="card-visual-stock">
-                <div className="stock-pill stock-low">Vax Deluxe • FÅ KVAR</div>
-                <div className="stock-pill stock-ok">Rakolja Eko • OK</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="design" className="design-story-section">
+        <div className="container design-story-grid">
+          <div className="design-story-visual-shell">
+            <div className="design-story-frame"></div>
+            <div className="design-story-visual">
+              <img
+                src="/trimmer.webp"
+                alt="Trimmer på marmorskiva"
+                className="design-story-image"
+                loading="lazy"
+              />
+              <div className="design-story-image-overlay"></div>
+            </div>
+          </div>
+
+          <div className="design-story-copy">
+            <h2>Designad för perfektionister.</h2>
+            <p>
+              Vi förstår att din tid är din mest värdefulla tillgång. Därför har vi skalat bort allt brus och skapat ett gränssnitt som känns lika naturligt som saxen i din hand, optimerat för ljusa premiumsalonger.
+            </p>
+
+            <div className="design-story-points">
+              <div className="design-story-point">
+                <span className="design-story-point-icon" aria-hidden="true"></span>
+                <div>
+                  <h3>Sömlös integration</h3>
+                  <p>Koppla ihop med dina befintliga verktyg och betallösningar utan huvudvärk.</p>
+                </div>
+              </div>
+
+              <div className="design-story-point">
+                <span className="design-story-point-icon" aria-hidden="true"></span>
+                <div>
+                  <h3>Automatiserad kommunikation</h3>
+                  <p>Påminnelser och bekräftelser som håller dina kunder informerade och eliminerar uteblivna besök.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -380,7 +390,7 @@ export default function HomePage() {
               <p>Testa alla Professional-funktioner gratis i 14 dagar. Inget kreditkort krävs. Ingen bindningstid.</p>
             </div>
             <div className="banner-actions">
-              <Link href="/registrera-salong" className="btn btn-primary">
+              <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
                 Starta gratis testperiod
               </Link>
               <a href="#kontakt" className="btn btn-outline outline-white-btn">
@@ -422,19 +432,12 @@ export default function HomePage() {
       <section className="cta-section">
         <div className="container">
           <div className="cta-inner-purple">
-            <h2>Redo att uppgradera din salong?</h2>
+            <h2>Redo att lyfta din salong till nästa nivå?</h2>
             <p>Anslut dig till eliten av svenska barberare. Ingen bindningstid, fullt stöd under hela din uppstartsresa.</p>
             <div className="cta-actions">
               <Link href="/registrera-salong" className="btn btn-primary btn-cta-gold">
-                Starta din 14-dagars gratis provperiod
+                Kom igång nu
               </Link>
-              <a href="#kontakt" className="btn btn-outline outline-white-btn">
-                Boka rådgivning
-              </a>
-            </div>
-            <div className="cta-lock-notice">
-              <span className="lock-icon">🔒</span>
-              Kreditkort krävs ej för provperiod
             </div>
           </div>
         </div>

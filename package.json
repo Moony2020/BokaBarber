@@ -2,8 +2,11 @@
   "name": "bokabarber-root",
   "version": "1.0.0",
   "private": true,
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
   "scripts": {
-    "dev": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "dev:backend": "npm run dev --prefix backend"
   }
 }

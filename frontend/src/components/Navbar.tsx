@@ -102,8 +102,7 @@ export default function Navbar() {
           setUser(null);
           localStorage.removeItem('user');
         }
-      } catch (e) {
-        console.error('Failed to verify user:', e);
+      } catch {
         setUser(null);
         localStorage.removeItem('user');
       }
@@ -144,7 +143,7 @@ export default function Navbar() {
   return (
     <header ref={navbarRef} className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}${menuOpen ? ' menu-open' : ''}`}>
       <div className="container navbar-inner">
-        <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
+        <Link href="/#hero" className="navbar-logo" aria-label="BokaBarber startsida">
           <svg className="barber-logo-icon navbar-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="6" cy="6" r="3" />
             <path d="M8.12 8.12 12 12" />
