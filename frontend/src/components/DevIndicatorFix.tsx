@@ -31,6 +31,15 @@ export default function DevIndicatorFix() {
           [data-nextjs-toast],
           #devtools-indicator,
           #data-devtools-indicator { bottom: ${BOTTOM} !important; }
+          
+          @media (max-width: 768px) {
+            [data-devtools-indicator],
+            #devtools-indicator,
+            #data-devtools-indicator {
+              transform: scale(0.8) !important;
+              transform-origin: bottom left !important;
+            }
+          }
         `;
       });
     };

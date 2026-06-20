@@ -4291,7 +4291,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   transform: translateY(-2px);
 }
 
-@media (max-width: 786px) {
+@media (max-width: 768px) {
   .scroll-to-top-btn {
     width: 32px;
     height: 32px;
