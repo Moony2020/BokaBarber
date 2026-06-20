@@ -69,7 +69,9 @@ if (!CLIENT_URL && process.env.NODE_ENV === 'production') {
 
 app.use(cors({
   origin: CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 // Global Helmet Protection
@@ -175,10 +177,11 @@ app.post('/api/v1/auth/register-shop',
     body('lastName').notEmpty().withMessage('Efternamn krävs.'),
     body('shopName').notEmpty().withMessage('Salongsnamn krävs.'),
     body('slug').matches(/^[a-z0-9-]+$/).withMessage('Ogiltig webbadress.'),
+    body('plan').optional().isIn(['bas', 'pro']).withMessage('Ogiltig abonnemangsplan.'),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
-  const { email, password, firstName, lastName, shopName, slug, address } = req.body;
+  const { email, password, firstName, lastName, shopName, slug, address, plan: selectedPlan = 'bas' } = req.body;
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -232,18 +235,20 @@ app.post('/api/v1/auth/register-shop',
     });
     const savedUser = await newUser.save({ session });
 
-    // Fetch default "Bas" plan
-    const plan = await Plan.findOne({ name: 'Bas' });
+    const planName = selectedPlan === 'pro' ? 'Professional' : 'Bas';
+    const plan = await Plan.findOne({ name: planName });
     if (!plan) {
-      throw new Error('Default Bas plan not found in database. Seed the database first.');
+      throw new Error(`Default ${planName} plan not found in database. Seed the database first.`);
     }
+
+    const currentPeriodEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     const defaultSubscription = new Subscription({
       shopId: savedShop._id,
       planId: plan._id,
       status: 'trial',
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
-      currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      trialEndsAt: currentPeriodEnd,
+      currentPeriodEnd
     });
     await defaultSubscription.save({ session });
 
@@ -252,7 +257,11 @@ app.post('/api/v1/auth/register-shop',
 
     return res.status(201).json({
       message: 'Salong och administratörskonto har skapats framgångsrikt!',
-      shopId: savedShop._id, userId: savedUser._id
+      shopId: savedShop._id,
+      userId: savedUser._id,
+      planName,
+      trialEndsAt: currentPeriodEnd,
+      shopSlug: savedShop.slug
     });
   } catch (error) {
     await session.abortTransaction();
@@ -284,17 +293,120 @@ app.post('/api/v1/auth/login',
     );
 
     res.cookie('accessToken', token, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     return res.json({
       message: 'Inloggningen lyckades!',
+      token,
       user: { id: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName, shopId: user.shopId }
     });
   } catch (error) {
     console.error('Inloggningsfel:', error);
     return res.status(500).json({ error: 'Ett internt fel uppstod vid inloggningen.' });
+  }
+});
+
+// Forgot password — sends reset link via email (token valid 1 hour)
+app.post('/api/v1/auth/forgot-password', async (req: Request, res: Response) => {
+  const { email } = req.body as { email?: string };
+  if (!email) return res.status(400).json({ error: 'E-postadress krävs.' });
+
+  try {
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always return 200 to avoid email enumeration
+    if (!user) return res.json({ message: 'Om e-postadressen finns registrerad har ett e-postmeddelande skickats.' });
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = expires;
+    await user.save();
+
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/aterstall-losenord?token=${token}`;
+    const transporter = (await import('./services/emailService')).default || require('./services/emailService');
+
+    // Use the existing email infrastructure
+    const nodemailer = require('nodemailer');
+    const smtpTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+
+    await smtpTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@bokabarber.se',
+      to: user.email,
+      subject: 'Återställ ditt BokaBarber-lösenord',
+      html: `
+        <!DOCTYPE html>
+        <html lang="sv">
+        <body style="margin:0;padding:0;background:#faf9f6;font-family:'Helvetica Neue',Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#faf9f6;padding:40px 20px;">
+            <tr><td align="center">
+              <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid rgba(197,160,89,0.2);">
+                <!-- Header -->
+                <tr><td style="background:linear-gradient(135deg,#4b0082,#7b41b3);padding:32px 40px;text-align:center;">
+                  <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.02em;">✂ BokaBarber</p>
+                  <p style="margin:6px 0 0;font-size:12px;color:rgba(255,255,255,0.7);letter-spacing:0.12em;text-transform:uppercase;">Premiumsystem för frisörsalonger</p>
+                </td></tr>
+                <!-- Body -->
+                <tr><td style="padding:40px 40px 32px;">
+                  <p style="font-size:24px;font-weight:700;color:#1c1b1f;margin:0 0 8px;">Hej ${escapeHTML(user.firstName)},</p>
+                  <p style="color:#555;line-height:1.6;margin:0 0 28px;">Vi fick en begäran om att återställa lösenordet för ditt BokaBarber-konto. Klicka på knappen nedan – länken gäller i <strong>1 timme</strong>.</p>
+                  <div style="text-align:center;margin:32px 0;">
+                    <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#a78834,#8a6b20);color:#ffffff;font-size:15px;font-weight:700;letter-spacing:0.06em;text-decoration:none;padding:16px 40px;border-radius:10px;">Återställ lösenord →</a>
+                  </div>
+                  <p style="color:#888;font-size:13px;line-height:1.6;margin:0;">Om du inte begärde detta kan du ignorera detta e-postmeddelande. Ditt lösenord förblir oförändrat.</p>
+                </td></tr>
+                <!-- Footer -->
+                <tr><td style="background:#f5f3ef;padding:20px 40px;border-top:1px solid #ece9e0;">
+                  <p style="margin:0;font-size:12px;color:#aaa;text-align:center;">
+                    © 2026 BokaBarber &nbsp;·&nbsp;
+                    <a href="mailto:support@bokabarber.se" style="color:#b8860b;text-decoration:none;">support@bokabarber.se</a>
+                  </p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+      `
+    });
+
+    return res.json({ message: 'Om e-postadressen finns registrerad har ett e-postmeddelande skickats.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    return res.status(500).json({ error: 'Kunde inte skicka e-post. Försök igen senare.' });
+  }
+});
+
+// Reset password using token
+app.post('/api/v1/auth/reset-password', async (req: Request, res: Response) => {
+  const { token, password } = req.body as { token?: string; password?: string };
+  if (!token || !password) return res.status(400).json({ error: 'Token och lösenord krävs.' });
+  if (password.length < 8) return res.status(400).json({ error: 'Lösenordet måste vara minst 8 tecken.' });
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+    if (!user) return res.status(400).json({ error: 'Ogiltig eller utgången återställningslänk.' });
+
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.json({ message: 'Lösenordet har återställts. Du kan nu logga in.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return res.status(500).json({ error: 'Något gick fel.' });
   }
 });
 
@@ -304,9 +416,24 @@ app.post('/api/v1/auth/logout', (_req, res) => {
   return res.json({ message: 'Du har loggats ut.' });
 });
 
-// Get profile
-app.get('/api/v1/auth/me', authenticateUser, (req: AuthenticatedRequest, res) => {
-  return res.json({ user: req.user });
+// Get profile — fetch from DB so shopId/firstName/lastName are always current
+app.get('/api/v1/auth/me', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const dbUser = await User.findById(req.user!.userId).select('-passwordHash -resetPasswordToken -resetPasswordExpires');
+    if (!dbUser) return res.status(401).json({ error: 'Användaren hittades inte.' });
+    return res.json({
+      user: {
+        id: dbUser._id,
+        email: dbUser.email,
+        role: dbUser.role,
+        firstName: dbUser.firstName,
+        lastName: dbUser.lastName,
+        shopId: dbUser.shopId?.toString()
+      }
+    });
+  } catch {
+    return res.status(500).json({ error: 'Internt serverfel.' });
+  }
 });
 
 // ===========================================================================
@@ -348,9 +475,6 @@ app.get('/api/v1/shops/search', async (req, res) => {
     // Dynamically filter active/trial and fully ready salons
     const verifiedShops = await Promise.all(
       shops.map(async (shop) => {
-        // Run trial expiration detector
-        await expireTrialsIfNeeded(shop._id);
-
         // 1. Subscription Status validation
         const sub = await Subscription.findOne({ shopId: shop._id });
         if (!sub) return null;
@@ -388,9 +512,6 @@ app.get('/api/v1/shops/:slug', async (req, res) => {
     const shop = await Shop.findOne({ slug: req.params.slug }).lean();
     if (!shop) return res.status(404).json({ error: 'Salongen hittades inte.' });
 
-    // Run trial expiration detector
-    await expireTrialsIfNeeded(shop._id);
-
     const settings = await ShopSettings.findOne({ shopId: shop._id }).lean();
     const services = await Service.find({ shopId: shop._id, isActive: true }).lean();
     const barberProfiles = await BarberProfile.find({ shopId: shop._id, isActive: true }).lean();
@@ -416,8 +537,7 @@ app.get('/api/v1/shops/:slug', async (req, res) => {
     if (!sub || sub.status === 'suspended' || sub.status === 'cancelled' || (sub.status === 'trial' && new Date(sub.trialEndsAt) < new Date())) {
       statusFlag = 'suspended';
     } else {
-      const hasOpeningHours = settings?.openingHours?.some(oh => oh.isOpen) ?? false;
-      if (services.length === 0 || barbers.length === 0 || !hasOpeningHours) {
+      if (services.length === 0 || barbers.length === 0) {
         statusFlag = 'not_ready';
       }
     }
@@ -1119,6 +1239,151 @@ app.post('/api/v1/billing/:shopId/create-checkout-session', authenticateUser, re
   } catch (error) {
     console.error('Stripe Checkout Error:', error);
     return res.status(500).json({ error: 'Kunde inte skapa Stripe checkout-session.' });
+  }
+});
+
+// ── Simple checkout with inline prices (no Stripe Product setup needed) ──
+app.post('/api/v1/billing/:shopId/quick-checkout', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { plan } = req.body as { plan: 'bas' | 'pro' };
+    const shopId = req.params.shopId;
+    if (!plan || !['bas', 'pro'].includes(plan)) {
+      return res.status(400).json({ error: 'Ogiltig plan. Välj "bas" eller "pro".' });
+    }
+    const user = await User.findById(req.user!.userId).select('email');
+    const isBas = plan === 'bas';
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      customer_email: user?.email || undefined,
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'sek',
+          unit_amount: isBas ? 29900 : 39900,
+          recurring: { interval: 'month' },
+          product_data: {
+            name: isBas ? 'BokaBarber Bas' : 'BokaBarber Professional',
+            description: isBas
+              ? 'Upp till 2 anställda · Digital kalender · SMS-påminnelser'
+              : 'Obegränsat antal anställda · Avancerad lagerhantering · Prioriterad support 24/7'
+          }
+        }
+      }],
+      success_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/admin/${shopId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/admin/${shopId}?payment=cancelled`,
+      metadata: { shopId, plan },
+    });
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error('Quick checkout error:', err);
+    return res.status(500).json({ error: 'Kunde inte starta betalning.' });
+  }
+});
+
+// ── Verify Stripe session and activate subscription after redirect ──
+app.post('/api/v1/billing/:shopId/verify-session', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { session_id } = req.body as { session_id: string };
+    const shopId = req.params.shopId;
+    if (!session_id) return res.status(400).json({ error: 'session_id krävs.' });
+
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    if (session.payment_status !== 'paid' && session.status !== 'complete') {
+      return res.status(402).json({ error: 'Betalning ej genomförd.' });
+    }
+
+    const plan = session.metadata?.plan || 'bas';
+    const sub = await Subscription.findOne({ shopId: new Types.ObjectId(shopId) });
+    if (sub) {
+      sub.status = 'active';
+      if (session.subscription) sub.stripeSubscriptionId = session.subscription as string;
+      if (session.customer) sub.stripeCustomerId = session.customer as string;
+      sub.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await sub.save();
+    }
+    await Shop.findByIdAndUpdate(shopId, { isActive: true });
+    return res.json({ ok: true, plan, status: 'active' });
+  } catch (err) {
+    console.error('Verify session error:', err);
+    return res.status(500).json({ error: 'Kunde inte verifiera betalning.' });
+  }
+});
+
+// ── PayPal helpers ──
+const PAYPAL_BASE = 'https://api-m.sandbox.paypal.com';
+
+async function getPayPalAccessToken(): Promise<string> {
+  const clientId = process.env.PAYPAL_CLIENT_ID!;
+  const secret = process.env.PAYPAL_SECRET!;
+  const auth = Buffer.from(`${clientId}:${secret}`).toString('base64');
+  const r = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials'
+  });
+  const data = await r.json() as { access_token: string };
+  return data.access_token;
+}
+
+// ── Create PayPal order (redirects user to approve) ──
+app.post('/api/v1/billing/:shopId/create-paypal-order', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { plan } = req.body as { plan: 'bas' | 'pro' };
+    const shopId = req.params.shopId;
+    if (!plan || !['bas', 'pro'].includes(plan)) return res.status(400).json({ error: 'Ogiltig plan.' });
+    const amount = plan === 'bas' ? '299.00' : '399.00';
+    const planName = plan === 'bas' ? 'BokaBarber Bas' : 'BokaBarber Professional';
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const accessToken = await getPayPalAccessToken();
+    const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [{ amount: { currency_code: 'SEK', value: amount }, description: planName }],
+        application_context: {
+          return_url: `${clientUrl}/admin/${shopId}?paypal=success&plan=${plan}`,
+          cancel_url: `${clientUrl}/admin/${shopId}?paypal=cancelled`,
+          brand_name: 'BokaBarber',
+          user_action: 'PAY_NOW'
+        }
+      })
+    });
+    const orderData = await orderRes.json() as { links?: Array<{ rel: string; href: string }> };
+    const approveUrl = orderData.links?.find(l => l.rel === 'approve')?.href;
+    if (!approveUrl) return res.status(500).json({ error: 'Kunde inte skapa PayPal-order.' });
+    return res.json({ approveUrl });
+  } catch (err) {
+    console.error('PayPal create order error:', err);
+    return res.status(500).json({ error: 'Kunde inte starta PayPal-betalning.' });
+  }
+});
+
+// ── Capture PayPal order and activate subscription ──
+app.post('/api/v1/billing/:shopId/capture-paypal-order', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { order_id, plan } = req.body as { order_id: string; plan: 'bas' | 'pro' };
+    const shopId = req.params.shopId;
+    if (!order_id) return res.status(400).json({ error: 'order_id krävs.' });
+    const accessToken = await getPayPalAccessToken();
+    const captureRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${order_id}/capture`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+    });
+    const captureData = await captureRes.json() as { status: string };
+    if (captureData.status !== 'COMPLETED') return res.status(402).json({ error: 'PayPal-betalning ej genomförd.' });
+    const sub = await Subscription.findOne({ shopId: new Types.ObjectId(shopId) });
+    if (sub) {
+      sub.status = 'active';
+      sub.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await sub.save();
+    }
+    await Shop.findByIdAndUpdate(shopId, { isActive: true });
+    return res.json({ ok: true, plan, status: 'active' });
+  } catch (err) {
+    console.error('PayPal capture error:', err);
+    return res.status(500).json({ error: 'Kunde inte slutföra PayPal-betalning.' });
   }
 });
 

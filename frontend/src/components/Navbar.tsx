@@ -21,7 +21,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super');
+  const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super') || pathname === '/dashboard';
   const navbarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -91,6 +91,12 @@ export default function Navbar() {
   }, [pathname]);
 
   useEffect(() => {
+    // Load from localStorage immediately so Instrumentpanel shows without waiting for API
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
+
     const loadUser = async () => {
       try {
         const res = await api.me();
@@ -101,16 +107,15 @@ export default function Navbar() {
         } else {
           setUser(null);
           localStorage.removeItem('user');
+          localStorage.removeItem('authToken');
         }
       } catch {
-        setUser(null);
-        localStorage.removeItem('user');
+        // Network error — keep localStorage user so Instrumentpanel still works
       }
     };
 
     loadUser();
 
-    // Listen to local and storage events for reactive sync
     window.addEventListener('auth-change', loadUser);
     window.addEventListener('storage', loadUser);
 
@@ -124,6 +129,7 @@ export default function Navbar() {
     try {
       await api.logout();
       localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
       setUser(null);
       window.dispatchEvent(new Event('auth-change'));
       router.push('/');
@@ -133,11 +139,8 @@ export default function Navbar() {
     }
   };
 
-  const getDashboardLink = () => {
-    if (!user) return '/';
-    if (user.role === 'super_admin') return '/super';
-    if (user.role === 'shop_admin' && user.shopId) return `/admin/${user.shopId}`;
-    return '/';
+  const goToDashboard = () => {
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -166,7 +169,7 @@ export default function Navbar() {
         <div className="navbar-actions">
           {user ? (
             <div className="user-profile-menu">
-              <Link href={getDashboardLink()} className="btn btn-secondary btn-dashboard-nav" aria-label="Instrumentpanel">
+              <button onClick={goToDashboard} className="btn btn-secondary btn-dashboard-nav" aria-label="Instrumentpanel">
                 <span className="dashboard-text">Instrumentpanel</span>
                 <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="9" />
@@ -174,21 +177,24 @@ export default function Navbar() {
                   <rect x="14" y="12" width="7" height="9" />
                   <rect x="3" y="16" width="7" height="5" />
                 </svg>
-              </Link>
+              </button>
               <button onClick={handleLogout} className="btn btn-outline btn-logout-nav">
                 Logga ut
               </button>
             </div>
           ) : (
-            <Link href="/sok" className="btn btn-primary btn-booking-nav" aria-label="Boka nu">
-              <span className="login-text">Boka Nu</span>
-              <svg className="booking-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-            </Link>
+            <>
+              <Link href="/login" className="btn-login-nav">Logga in</Link>
+              <Link href="/sok" className="btn btn-primary btn-booking-nav" aria-label="Boka nu">
+                <span className="login-text">Boka Nu</span>
+                <svg className="booking-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </Link>
+            </>
           )}
 
           {/* Mobile menu button */}
@@ -213,9 +219,9 @@ export default function Navbar() {
             <Link href="/#faq" className={`mobile-link ${activeHash === '#faq' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>Om Oss</Link>
             {user ? (
               <>
-                <Link href={getDashboardLink()} className="mobile-link" onClick={() => setMenuOpen(false)}>
+                <button onClick={() => { setMenuOpen(false); goToDashboard(); }} className="mobile-link" style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
                   Instrumentpanel ({user.firstName})
-                </Link>
+                </button>
                 <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="mobile-logout-btn">
                   Logga ut
                 </button>

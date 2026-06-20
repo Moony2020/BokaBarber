@@ -143,7 +143,7 @@ export default function HomePage() {
               </div>
 
               <div className="hero-actions">
-                <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
+                <Link href="/registrera-salong?plan=pro" className="btn btn-primary btn-hero-primary">
                   Starta din 14-dagars gratis provperiod
                 </Link>
                 <Link href="/royal-cuts" className="btn btn-outline btn-hero-outline">
@@ -312,7 +312,7 @@ export default function HomePage() {
               </ul>
 
               <Link href="/registrera-salong?plan=bas" className="btn btn-outline plan-btn">
-                Välj Bas
+                Starta med Bas
               </Link>
             </div>
 
@@ -390,7 +390,7 @@ export default function HomePage() {
               <p>Testa alla Professional-funktioner gratis i 14 dagar. Inget kreditkort krävs. Ingen bindningstid.</p>
             </div>
             <div className="banner-actions">
-              <Link href="/registrera-salong" className="btn btn-primary btn-hero-primary">
+              <Link href="/registrera-salong?plan=pro" className="btn btn-primary btn-hero-primary">
                 Starta gratis testperiod
               </Link>
               <a href="#kontakt" className="btn btn-outline outline-white-btn">
@@ -435,7 +435,7 @@ export default function HomePage() {
             <h2>Redo att lyfta din salong till nästa nivå?</h2>
             <p>Anslut dig till eliten av svenska barberare. Ingen bindningstid, fullt stöd under hela din uppstartsresa.</p>
             <div className="cta-actions">
-              <Link href="/registrera-salong" className="btn btn-primary btn-cta-gold">
+              <Link href="/registrera-salong?plan=pro" className="btn btn-primary btn-cta-gold">
                 Kom igång nu
               </Link>
             </div>

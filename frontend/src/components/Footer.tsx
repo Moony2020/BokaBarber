@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 
 export default function Footer() {
   const pathname = usePathname();
-  const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super');
+  const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super') || pathname === '/dashboard';
+  if (pathname === '/dashboard') return null;
 
   return (
     <footer className={`footer ${isDashboard ? 'dashboard-footer' : 'public-footer'}`}>
@@ -131,7 +132,7 @@ export default function Footer() {
         </div>
       )}
 
-      <style jsx>{`
+      <style jsx global>{`
         .footer {
           margin-top: auto;
           position: relative;
@@ -267,7 +268,6 @@ export default function Footer() {
           background-color: var(--primary);
           color: #ffffff;
           border-color: var(--primary);
-          transform: translateY(-2px);
         }
 
         .footer-title {
@@ -293,7 +293,6 @@ export default function Footer() {
 
         .footer-link:hover {
           color: var(--primary);
-          padding-left: 4px;
         }
 
         .contact-item {

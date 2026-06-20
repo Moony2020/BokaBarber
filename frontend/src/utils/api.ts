@@ -9,9 +9,15 @@ interface FetchOptions {
 export async function apiFetch<T = unknown>(path: string, options: FetchOptions = {}): Promise<{ ok: boolean; status: number; data: T }> {
   const { method = 'GET', body, headers = {} } = options;
 
+  const authHeaders: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('authToken');
+    if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
   const config: RequestInit = {
     method,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers },
     credentials: 'include' as RequestCredentials,
     cache: 'no-store'
   };
@@ -37,7 +43,27 @@ export const api = {
   registerShop: (data: unknown) =>
     apiFetch('/auth/register-shop', { method: 'POST', body: data }),
 
+  forgotPassword: (email: string) =>
+    apiFetch('/auth/forgot-password', { method: 'POST', body: { email } }),
+
+  resetPassword: (token: string, password: string) =>
+    apiFetch('/auth/reset-password', { method: 'POST', body: { token, password } }),
+
   me: () => apiFetch('/auth/me'),
+
+  // Public
+  // Billing / Stripe
+  createCheckout: (shopId: string, plan: 'bas' | 'pro') =>
+    apiFetch(`/billing/${shopId}/quick-checkout`, { method: 'POST', body: { plan } }),
+
+  verifyStripeSession: (shopId: string, sessionId: string) =>
+    apiFetch(`/billing/${shopId}/verify-session`, { method: 'POST', body: { session_id: sessionId } }),
+
+  createPayPalOrder: (shopId: string, plan: 'bas' | 'pro') =>
+    apiFetch(`/billing/${shopId}/create-paypal-order`, { method: 'POST', body: { plan } }),
+
+  capturePayPalOrder: (shopId: string, orderId: string, plan: 'bas' | 'pro') =>
+    apiFetch(`/billing/${shopId}/capture-paypal-order`, { method: 'POST', body: { order_id: orderId, plan } }),
 
   // Public
   searchShops: (query?: string, city?: string) => {

@@ -24,9 +24,9 @@ PORT=5000
 NODE_ENV=development
 JWT_SECRET=boka_barber_ultra_secure_secret_key_2026
 CLIENT_URL=http://localhost:3000
-MONGODB_URI=mongodb+srv://mymoon676_db_user:kxWbviWxLRHgAgDk@cluster0.cg5jh48.mongodb.net/bokabarber?appName=Cluster0
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxxx.mongodb.net/bokabarber?appName=Cluster0
 ```
-*(Anslutningssträngen till ditt MongoDB Atlas-kluster är redan konfigurerad som standard, men du kan justera den här!)*
+*(Anslutningssträngen till ditt MongoDB Atlas-kluster kan konfigureras här, eller så kan du använda en lokal databasanslutning!)*
 
 ### 3. Så databasen (Seed)
 Vi har skapat ett databassådd-skript för att konfigurera prenumerationsplaner (Bas och Professional) samt en testsalong ("Royal Cuts") med tillhörande arbetstider, tjänster och en testfrisör. 

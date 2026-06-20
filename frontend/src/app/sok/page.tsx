@@ -1,8 +1,40 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/utils/api';
+import styles from './page.module.css';
+
+const SearchIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
+  </svg>
+);
+
+const MapPinIcon = ({ size = 20, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const StarIcon = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+
+const ScissorsIcon = ({ size = 48, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="6" cy="6" r="3" />
+    <path d="M8.12 8.12 12 12" />
+    <path d="M20 4 12 12" />
+    <circle cx="6" cy="18" r="3" />
+    <path d="M9.8 14.2 12 12" />
+    <path d="M20 20 12 12" />
+  </svg>
+);
 
 interface ShopResult {
   _id: string;
@@ -11,18 +43,72 @@ interface ShopResult {
   address: { street: string; city: string; zipCode: string };
   rating: number;
   reviewCount: number;
+  images: string[];
 }
+
+const FILTERS = [
+  { id: 'top', label: 'TOPPBETYG' },
+  { id: 'all', label: 'ALLA SALONGER' },
+  { id: 'near', label: 'NÄRA MIG' },
+  { id: 'premium', label: 'ENDAST PREMIUM' },
+] as const;
+
+const INITIAL_VISIBLE_SHOPS = 3;
+
+const normalizeCityKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  stockholm: { lat: 59.3293, lng: 18.0686 },
+  goteborg: { lat: 57.7089, lng: 11.9746 },
+  malmo: { lat: 55.605, lng: 13.0038 },
+  uppsala: { lat: 59.8586, lng: 17.6389 },
+  orebro: { lat: 59.2753, lng: 15.2134 },
+};
+
+const isPremiumShop = (shop: ShopResult) =>
+  (shop.rating || 0) >= 4.8 || shop.reviewCount >= 15 || shop.name.toLowerCase().includes('royal');
+
+const isNewShop = (shop: ShopResult) => shop.reviewCount > 0 && shop.reviewCount <= 5;
+
+const getShopDescription = (shop: ShopResult, index: number) => {
+  const descriptions = [
+    'En tidlös oas för den medvetna mannen. Här kombineras hantverk med modern lyx.',
+    'Specialister på traditionell knivrakning och klassiska konturer i en maskulin miljö.',
+    'Skandinavisk minimalism möter barberartradition. Fokus på hållbara produkter och precision.',
+  ];
+
+  const city = normalizeCityKey(shop.address.city);
+  if (city.includes('orebro')) return descriptions[1];
+  if (city.includes('stockholm')) return descriptions[2];
+  return descriptions[index % descriptions.length];
+};
+
+const getDistanceKm = (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(to.lat - from.lat);
+  const dLng = toRadians(to.lng - from.lng);
+  const lat1 = toRadians(from.lat);
+  const lat2 = toRadians(to.lat);
+  const a = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 export default function SokPage() {
   const [query, setQuery] = useState('');
-  const [city, setCity] = useState('');
+  const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [shops, setShops] = useState<ShopResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searched, setSearched] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showAllShops, setShowAllShops] = useState(false);
 
   const doSearch = async (q?: string, c?: string) => {
     setLoading(true);
-    setSearched(true);
     try {
       const res = await api.searchShops(q || '', c || '');
       if (res.ok) {
@@ -35,401 +121,202 @@ export default function SokPage() {
     }
   };
 
-  // Load all shops initially
   useEffect(() => {
-    doSearch();
+    const initialSearchTimer = setTimeout(() => {
+      doSearch();
+    }, 0);
+
+    return () => clearTimeout(initialSearchTimer);
   }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => setUserCoords({ lat: coords.latitude, lng: coords.longitude }),
+      () => setUserCoords(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery.length === 0) {
+      const resetTimer = setTimeout(() => doSearch('', ''), 150);
+      return () => clearTimeout(resetTimer);
+    }
+
+    if (trimmedQuery.length < 2) return;
+
+    const searchTimer = setTimeout(() => doSearch(trimmedQuery, ''), 250);
+    return () => clearTimeout(searchTimer);
+  }, [query]);
+
+  const filteredShops = useMemo(() => {
+    const result = [...shops];
+
+    if (activeFilter === 'top') {
+      return result.sort((a, b) => (b.rating || 0) - (a.rating || 0) || b.reviewCount - a.reviewCount);
+    }
+
+    if (activeFilter === 'premium') {
+      return result.filter(isPremiumShop);
+    }
+
+    if (activeFilter === 'near') {
+      if (userCoords) {
+        return result.sort((a, b) => {
+          const cityA = CITY_COORDINATES[normalizeCityKey(a.address.city)];
+          const cityB = CITY_COORDINATES[normalizeCityKey(b.address.city)];
+          const distanceA = cityA ? getDistanceKm(userCoords, cityA) : Number.MAX_SAFE_INTEGER;
+          const distanceB = cityB ? getDistanceKm(userCoords, cityB) : Number.MAX_SAFE_INTEGER;
+          return distanceA - distanceB;
+        });
+      }
+
+      if (query.trim()) {
+        const normalizedQuery = query.trim().toLowerCase();
+        return result.sort((a, b) => {
+          const aMatch = a.address.city.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+          const bMatch = b.address.city.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+          return bMatch - aMatch;
+        });
+      }
+    }
+
+    return result;
+  }, [activeFilter, query, shops, userCoords]);
+
+  useEffect(() => {
+    setShowAllShops(false);
+  }, [filteredShops]);
+
+  const visibleShops = showAllShops ? filteredShops : filteredShops.slice(0, INITIAL_VISIBLE_SHOPS);
+  const hasMoreShops = filteredShops.length > INITIAL_VISIBLE_SHOPS;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    doSearch(query, city);
+    doSearch(query.trim(), '');
+  };
+
+  const getPlaceholderImage = (index: number) => {
+    const fallbacks = [
+      'https://images.unsplash.com/photo-1517832606299-7ae9b720a186?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1512690459411-b0fd1c86b8c8?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=1200&auto=format&fit=crop',
+    ];
+    return fallbacks[index % fallbacks.length];
   };
 
   return (
-    <div className="sok-page public-theme animate-fade-in">
-
-      {/* 🌌 HERO SEARCH BAR (DEEP PURPLE CONTAINER) */}
-      <section className="sok-hero">
+    <div className={`${styles.sokPage} sok-page public-theme animate-fade-in`}>
+      <section className={styles.sokHeroPremium}>
         <div className="container">
-          <h1 className="hero-title">Hitta din salong</h1>
-          <p className="sok-subtitle">Sök bland registrerade salonger i hela Sverige</p>
+          <h1 className={`${styles.heroTitlePremium} text-serif`}>Hitta din salong</h1>
+          <p className={styles.sokSubtitlePremium}>
+            Upptäck de mest exklusiva barbershops i din stad. Skräddarsydd service för den moderna gentlemannen.
+          </p>
 
-          <form className="search-form" onSubmit={handleSearch}>
-            <div className="search-inputs">
-              <div className="search-field">
-                <span className="search-icon">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Sök salong, tjänst eller adress..."
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  className="search-input-field"
-                />
-              </div>
-              <div className="search-field-divider"></div>
-              <div className="search-field">
-                <span className="search-icon">📍</span>
-                <input
-                  type="text"
-                  placeholder="Stad..."
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  className="search-input-field"
-                />
-              </div>
-              <button type="submit" className="btn btn-primary search-btn">Sök</button>
+          <form className={styles.searchContainerPremium} onSubmit={handleSearch}>
+            <div className={styles.searchFieldPremium}>
+              <MapPinIcon size={20} className={styles.iconAccent} />
+              <input
+                type="text"
+                placeholder="Stad eller salongens namn..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                className={styles.searchInputPremium}
+                aria-label="Sök salong eller stad"
+              />
             </div>
+            <button type="submit" className={styles.searchSubmitBtn} aria-label="Genomför sökning">
+              SÖK <SearchIcon size={16} />
+            </button>
           </form>
         </div>
       </section>
 
-      {/* 💈 RESULTS SECTION */}
-      <section className="sok-results">
-        <div className="container">
+      <section className={styles.filtersSection}>
+        <div className={styles.containerNarrow}>
+          <div className={styles.filterChips}>
+            {FILTERS.map(filter => (
+              <button
+                key={filter.id}
+                className={`${styles.chip} ${activeFilter === filter.id ? styles.active : ''}`}
+                onClick={() => setActiveFilter(filter.id)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {loading && (
-            <div className="loading-state">
-              <div className="spinner"></div>
-              <p>Söker efter tillgängliga salonger...</p>
+      <section className={styles.sokResults}>
+        <div className={styles.containerNarrow}>
+          {loading ? (
+            <div className={styles.loadingState}>
+              <div className={styles.spinnerPremium}></div>
+              <p>Söker efter exklusiva salonger...</p>
             </div>
-          )}
-
-          {!loading && searched && shops.length === 0 && (
-            <div className="empty-results card-premium">
-              <div className="empty-icon">🔍</div>
+          ) : filteredShops.length === 0 ? (
+            <div className={`${styles.emptyResultsPremium} card-premium`}>
+              <ScissorsIcon size={48} className={styles.iconMuted} />
               <h3>Inga salonger hittades</h3>
-              <p>Vi hittade inga salonger som matchar din sökning. Prova med andra sökord eller en annan stad.</p>
+              <p>Vi hittade tyvärr inga salonger som matchar din sökning. Prova att justera din sökning eller välj en annan stad.</p>
             </div>
-          )}
-
-          {!loading && shops.length > 0 && (
+          ) : (
             <>
-              <p className="results-count">
-                {shops.length} {shops.length === 1 ? 'salong hittade' : 'salonger hittade'}
-              </p>
+              <div className={styles.shopGridPremium}>
+                {visibleShops.map((shop, index) => (
+                  <Link key={shop._id} href={`/${shop.slug}`} className={styles.shopCardPremium}>
+                    <div className={styles.shopImageWrapper}>
+                      <img src={shop.images?.[0] || getPlaceholderImage(index)} alt={shop.name} loading="lazy" />
+                    {isNewShop(shop) ? (
+                      <span className={styles.imageBadge}>NYHET</span>
+                    ) : isPremiumShop(shop) ? (
+                      <span className={styles.imageBadge}>PREMIUM</span>
+                    ) : null}
+                  </div>
 
-              <div className="shop-grid">
-                {shops.map(shop => (
-                  <Link key={shop._id} href={`/${shop.slug}`} className="shop-card card-premium">
-                    <div className="shop-card-content">
-                      <div className="shop-avatar">💈</div>
-                      <div className="shop-card-info">
-                        <h3 className="shop-card-name">{shop.name}</h3>
-                        <p className="shop-card-location">📍 {shop.address?.street}, {shop.address?.city}</p>
+                  <div className={styles.shopCardBody}>
+                    <div className={styles.shopCardHeader}>
+                      <h3 className={`${styles.shopTitlePremium} text-serif`}>{shop.name}</h3>
+                      <div className={styles.shopRatingInline} aria-label={`Betyg: ${shop.rating?.toFixed(1) || '4.9'}`}>
+                        <StarIcon size={14} />
+                        <span>{shop.rating?.toFixed(1) || '4.9'}</span>
                       </div>
                     </div>
 
-                    <div className="shop-card-divider"></div>
+                    <p className={styles.shopDescPremium}>{getShopDescription(shop, index)}</p>
 
-                    <div className="shop-card-footer">
-                      <div className="shop-rating">
-                        <span className="star">⭐</span>
-                        <span className="rating-val">{shop.rating ? shop.rating.toFixed(1) : '4.9'}</span>
-                        <span className="review-count">
-                          ({shop.reviewCount || 142} {shop.reviewCount === 1 ? 'omdöme' : 'omdömen'})
-                        </span>
-                      </div>
-                      <span className="book-link-serif">Boka →</span>
+                    <div className={styles.shopCardMeta}>
+                      <span className={styles.metaItem}>
+                        <MapPinIcon size={13} />
+                        {shop.address.city.toUpperCase()}
+                      </span>
                     </div>
+                  </div>
+
+                    <div className={styles.bookCta}>BOKA TID</div>
                   </Link>
                 ))}
               </div>
+
+              {!showAllShops && hasMoreShops ? (
+                <div className={styles.loadMoreWrap}>
+                  <button type="button" className={styles.loadMoreButton} onClick={() => setShowAllShops(true)}>
+                    Visa Fler Salonger
+                  </button>
+                </div>
+              ) : null}
             </>
           )}
         </div>
       </section>
-
-      <style jsx>{`
-        .sok-page {
-          background-color: var(--bg-primary);
-          min-height: 100vh;
-          padding-bottom: 80px;
-        }
-
-        /* 🌌 DEEP PURPLE HERO SEARCH */
-        .sok-hero {
-          background-color: var(--primary);
-          padding: 105px 0 64px 0;
-          text-align: center;
-          color: #ffffff;
-          position: relative;
-          box-shadow: 0 4px 30px rgba(45, 0, 77, 0.15);
-        }
-
-        .hero-title {
-          font-family: var(--font-primary);
-          font-size: 2.8rem;
-          font-weight: 700;
-          margin-bottom: 12px;
-          color: #ffffff;
-          letter-spacing: -0.5px;
-        }
-
-        .sok-subtitle {
-          color: var(--text-muted);
-          font-size: 1.1rem;
-          margin-bottom: 36px;
-          opacity: 0.9;
-        }
-
-        .search-form {
-          max-width: 740px;
-          margin: 0 auto;
-        }
-
-        .search-inputs {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background-color: #ffffff;
-          padding: 8px;
-          border-radius: var(--radius-lg);
-          box-shadow: 0 15px 35px rgba(27, 3, 48, 0.2);
-          border: 1px solid rgba(197, 160, 89, 0.15);
-        }
-
-        .search-field {
-          position: relative;
-          flex: 1;
-          display: flex;
-          align-items: center;
-        }
-
-        .search-field-divider {
-          width: 1px;
-          height: 32px;
-          background-color: var(--border-color);
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 16px;
-          font-size: 1.1rem;
-          color: var(--accent);
-          pointer-events: none;
-        }
-
-        .search-input-field {
-          width: 100%;
-          padding: 14px 16px 14px 44px;
-          font-size: 1rem;
-          background: transparent;
-          border: none;
-          color: var(--text-primary);
-          outline: none;
-        }
-
-        .search-input-field::placeholder {
-          color: var(--text-muted);
-          opacity: 0.8;
-        }
-
-        .search-btn {
-          padding: 14px 36px;
-          height: 48px;
-          border-radius: var(--radius-md) !important;
-          font-weight: 700;
-        }
-
-        /* 💈 RESULTS SECTION */
-        .sok-results {
-          padding: 56px 0;
-        }
-
-        .results-count {
-          font-family: var(--font-secondary);
-          font-weight: 700;
-          color: var(--text-secondary);
-          margin-bottom: 32px;
-          font-size: 1rem;
-          letter-spacing: 0.5px;
-        }
-
-        .shop-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-          gap: 32px;
-        }
-
-        @media (max-width: 768px) {
-          .search-inputs {
-            flex-direction: column;
-            gap: 8px;
-            padding: 16px;
-            border-radius: var(--radius-md);
-          }
-          .search-field-divider {
-            display: none;
-          }
-          .search-btn {
-            width: 100%;
-            height: 52px;
-          }
-          .shop-grid {
-            grid-template-columns: 1fr;
-          }
-          .hero-title {
-            font-size: 2.2rem;
-          }
-        }
-
-        .shop-card {
-          display: flex;
-          flex-direction: column;
-          background-color: #ffffff;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          text-decoration: none;
-          color: inherit;
-          box-shadow: var(--shadow-sm);
-          transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
-        }
-
-        .shop-card:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-premium);
-          border-color: var(--accent);
-        }
-
-        .shop-card-content {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          padding: 24px;
-        }
-
-        .shop-avatar {
-          width: 56px;
-          height: 56px;
-          border-radius: var(--radius-full);
-          background-color: var(--primary-light);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.6rem;
-          flex-shrink: 0;
-          border: 1px solid var(--border-color);
-        }
-
-        .shop-card-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .shop-card-name {
-          font-family: var(--font-primary);
-          font-size: 1.3rem;
-          font-weight: 700;
-          color: var(--text-primary);
-        }
-
-        .shop-card-location {
-          font-size: 0.9rem;
-          color: var(--text-secondary);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .shop-card-divider {
-          height: 1px;
-          background-color: var(--border-color);
-          width: 100%;
-        }
-
-        .shop-card-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 24px;
-          background-color: var(--bg-secondary);
-          border-bottom-left-radius: var(--radius-md);
-          border-bottom-right-radius: var(--radius-md);
-        }
-
-        .shop-rating {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-
-        .star {
-          color: var(--accent);
-        }
-
-        .rating-val {
-          color: var(--text-primary);
-          font-weight: 700;
-        }
-
-        .review-count {
-          color: var(--text-muted);
-        }
-
-        .book-link-serif {
-          font-family: var(--font-primary);
-          font-weight: 700;
-          color: var(--primary);
-          font-size: 1rem;
-          transition: transform var(--transition-fast);
-        }
-
-        .shop-card:hover .book-link-serif {
-          transform: translateX(4px);
-        }
-
-        /* ⏳ LOADING STATE & SPINNER */
-        .loading-state {
-          text-align: center;
-          padding: 80px 20px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          color: var(--text-secondary);
-          font-size: 1.1rem;
-        }
-
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid var(--border-color);
-          border-top-color: var(--accent);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .empty-results {
-          text-align: center;
-          padding: 80px 48px;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-
-        .empty-icon {
-          font-size: 3rem;
-          margin-bottom: 20px;
-        }
-
-        .empty-results h3 {
-          font-size: 1.4rem;
-          color: var(--text-primary);
-          margin-bottom: 12px;
-        }
-
-        .empty-results p {
-          color: var(--text-secondary);
-          line-height: 1.6;
-        }
-      `}</style>
-
     </div>
   );
 }

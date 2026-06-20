@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://mymoon676_db_user:kxWbviWxLRHgAgDk@cluster0.cg5jh48.mongodb.net/bokabarber?appName=Cluster0';
+dotenv.config();
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bokabarber';
 
 console.log('Testing connection to MongoDB...');
 console.log('URI:', MONGODB_URI.replace(/:[^@]+@/, ':****@')); // Hide password in logs

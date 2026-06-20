@@ -3,6 +3,7 @@ import { Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ServiceWorkerKiller from '@/components/ServiceWorkerKiller';
 
 const playfairDisplay = Playfair_Display({
   weight: ['400', '500', '600', '700'],
@@ -36,6 +37,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
       </head>
       <body suppressHydrationWarning className={`${playfairDisplay.variable} ${plusJakartaSans.variable}`}>
+        <ServiceWorkerKiller />
         <div className="app-layout">
           <Navbar />
           <main className="main-content">

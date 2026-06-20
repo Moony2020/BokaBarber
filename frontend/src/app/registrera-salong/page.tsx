@@ -1,14 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useLayoutEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/utils/api';
 
 function RegisterContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const planQuery = searchParams.get('plan') || 'bas';
+  const successStorageKey = 'register-shop-success';
+
+  interface RegisterSuccessData {
+    shopId: string;
+    planName: string;
+    trialEndsAt: string;
+    shopSlug: string;
+  }
+
+  interface PersistedRegisterSuccessState {
+    shopName: string;
+    slug: string;
+    successData: RegisterSuccessData;
+  }
 
   // Form states
   const [shopName, setShopName] = useState('');
@@ -24,6 +37,8 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [success, setSuccess] = useState(false);
+  const [successData, setSuccessData] = useState<RegisterSuccessData | null>(null);
+  const [hasCheckedPersistedSuccess, setHasCheckedPersistedSuccess] = useState(false);
 
   // Auto-generate slug from shop name
   useEffect(() => {
@@ -40,6 +55,39 @@ function RegisterContent() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
+  useLayoutEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(successStorageKey);
+      if (!stored) {
+        setHasCheckedPersistedSuccess(true);
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as PersistedRegisterSuccessState;
+      if (!parsed?.successData?.shopSlug) {
+        setHasCheckedPersistedSuccess(true);
+        return;
+      }
+
+      setShopName(parsed.shopName || '');
+      setSlug(parsed.slug || '');
+      setSuccessData(parsed.successData);
+      setSuccess(true);
+    } catch {
+    } finally {
+      setHasCheckedPersistedSuccess(true);
+    }
+  }, []);
+
+  const formatTrialEndDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('sv-SE', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -47,6 +95,7 @@ function RegisterContent() {
 
     try {
       const res = await api.registerShop({
+          plan: planQuery,
           email,
           password,
           firstName,
@@ -62,7 +111,17 @@ function RegisterContent() {
         });
 
       if (res.ok) {
+        const responseData = res.data as RegisterSuccessData;
+        setSuccessData(responseData);
+        try {
+          sessionStorage.setItem(successStorageKey, JSON.stringify({
+            shopName,
+            slug,
+            successData: responseData,
+          }));
+        } catch {}
         setSuccess(true);
+        setHasCheckedPersistedSuccess(true);
       } else {
         const data = res.data as { error?: string };
         setErrorMsg(data.error || 'Registreringen misslyckades.');
@@ -75,30 +134,69 @@ function RegisterContent() {
   };
 
   return (
-    <div className="register-page-wrap animate-fade-in">
+    <div className={`register-page-wrap animate-fade-in${success ? ' success-page-wrap' : ''}`}>
       <div className="container flex-center">
-        <div className="register-card glass-panel">
+        <div className={`register-card glass-panel${success ? ' success-card-mode' : ''}`}>
 
-          {success ? (
-            <div className="success-register text-center">
-              <span className="success-icon">🎉</span>
-              <h2>Salongen har skapats!</h2>
-              <p className="success-text">
-                Grattis! Ditt konto för <strong>{shopName}</strong> är nu skapat under adressen <strong>bokabarber.se/{slug}</strong>.
-              </p>
-              <div className="next-steps card-premium">
-                <h4>Nästa steg:</h4>
-                <p>Logga in på din salongspanel för att lägga till frisörer, arbetstider och tjänster.</p>
+          {!hasCheckedPersistedSuccess ? (
+            <div className="register-boot-shell" aria-hidden="true">
+              <div className="success-register success-register-placeholder">
+                <div className="success-icon-shell"></div>
+                <div className="success-heading-placeholder"></div>
+                <div className="success-text-placeholder"></div>
+                <div className="success-summary success-summary-placeholder"></div>
+                <div className="success-actions success-actions-placeholder">
+                  <div className="success-btn-placeholder"></div>
+                  <div className="success-btn-placeholder success-btn-placeholder-secondary"></div>
+                </div>
               </div>
-              <Link href="/login" className="btn btn-primary success-btn">
-                Logga in på instrumentpanelen
-              </Link>
+            </div>
+          ) : success ? (
+            <div className="success-register text-center">
+              <div className="success-icon-shell">
+                <span className="material-symbols-outlined success-icon">check_circle</span>
+              </div>
+              <h2>Din 14 dagars provperiod har startat</h2>
+              <p className="success-text">
+                Ditt salongskonto för <strong>{shopName}</strong> är nu skapat. Du kan börja lägga till tjänster, personal och öppettider direkt.
+              </p>
+              <div className="success-summary">
+                <div className="success-summary-grid">
+                  <div className="success-detail-card">
+                    <p className="success-label">Vald plan</p>
+                    <p className="success-value">{successData?.planName || (planQuery === 'pro' ? 'Professional' : 'Bas')}</p>
+                  </div>
+                  <div className="success-detail-card">
+                    <p className="success-label">Provperiod slutar</p>
+                    <p className="success-value">{formatTrialEndDate(successData?.trialEndsAt)}</p>
+                  </div>
+                </div>
+                <div className="success-divider"></div>
+                <div className="success-note">
+                  <span className="material-symbols-outlined success-note-icon">payments</span>
+                  <div>
+                    <p className="success-note-title">Inget kort krävs idag.</p>
+                    <p className="success-note-text">Om du vill fortsätta använda BokaBarber efter provperioden kan du aktivera betalning via Stripe Billing i din instrumentpanel.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="success-actions">
+                <Link href={successData?.shopId ? `/login?next=/admin/${successData.shopId}` : '/login'} className="btn btn-primary success-btn">
+                  Gå till instrumentpanelen
+                </Link>
+                <Link href={`/${successData?.shopSlug || slug}`} className="btn btn-outline success-secondary-btn">
+                  Visa bokningssidan
+                </Link>
+              </div>
             </div>
           ) : (
             <>
               <div className="register-header text-center">
                 <h2>Registrera din salong</h2>
                 <p>Du har valt abonnemangsplanen: <strong className="plan-badge">{planQuery === 'pro' ? 'Professional' : 'Bas'}</strong></p>
+                <p className="plan-helper-text">
+                  Du får 14 dagars gratis provperiod. Inget kort krävs idag.
+                </p>
               </div>
 
               {errorMsg && <div className="error-alert">⚠️ {errorMsg}</div>}
@@ -121,7 +219,8 @@ function RegisterContent() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="slug" className="form-label">Din bokningslänk</label>
+                  <label htmlFor="slug" className="form-label">Så här blir din bokningslänk</label>
+                  <p className="slug-helper-text">Vi skapar länken från salongens namn. Du kan ändra den om du vill.</p>
                   <div className="slug-input-wrapper">
                     <span className="slug-prefix">bokabarber.se/</span>
                     <input
@@ -206,6 +305,7 @@ function RegisterContent() {
 
                 <div className="form-group">
                   <label htmlFor="email" className="form-label">E-postadress</label>
+                  <p className="field-helper-text">Använd den e-postadress du vill logga in med. Det behöver inte vara en salongsdomän.</p>
                   <input
                     id="email"
                     type="email"
@@ -213,7 +313,7 @@ function RegisterContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="form-input"
-                    placeholder="namn@salong.se"
+                    placeholder="din@epost.se"
                   />
                 </div>
 
@@ -238,7 +338,7 @@ function RegisterContent() {
 
               <div className="register-footer text-center">
                 <p>Har du redan ett konto?</p>
-                <Link href="/login" className="login-link">
+                <Link href="/login" className="btn btn-outline login-link">
                   Logga in här
                 </Link>
               </div>
@@ -251,18 +351,49 @@ function RegisterContent() {
       <style jsx>{`
         .register-page-wrap {
           min-height: calc(100vh - 85px);
-          padding: 120px 24px 60px 24px;
+          padding: 24px 24px 60px 24px;
           background: radial-gradient(circle at 10% 80%, rgba(193, 141, 75, 0.04) 0%, transparent 50%);
+        }
+        .success-page-wrap {
+          background:
+            radial-gradient(circle at 12% 18%, rgba(197, 160, 89, 0.08) 0%, transparent 32%),
+            radial-gradient(circle at 88% 82%, rgba(75, 0, 130, 0.05) 0%, transparent 34%),
+            linear-gradient(180deg, rgba(250, 249, 248, 0.98) 0%, rgba(255, 255, 255, 1) 100%);
         }
         @media (max-width: 768px) {
           .register-page-wrap {
-            padding-top: 100px;
+            padding: 0 12px 40px 12px;
+          }
+          .register-page-wrap .container {
+            padding-left: 0;
+            padding-right: 0;
+          }
+          .register-card {
+            max-width: none;
+            width: min(100%, calc(100vw - 24px));
+            padding: 24px 18px;
           }
         }
         .register-card {
           width: 100%;
           max-width: 600px;
           padding: 32px;
+        }
+        .register-boot-shell {
+          min-height: 760px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+        }
+        .success-card-mode {
+          max-width: 860px;
+          padding: 56px 44px;
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(209, 197, 180, 0.28);
+          box-shadow:
+            0 32px 64px -18px rgba(119, 90, 25, 0.08),
+            0 16px 40px -24px rgba(45, 0, 77, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
         }
         .register-header {
           margin-bottom: 20px;
@@ -274,6 +405,12 @@ function RegisterContent() {
         .register-header p {
           color: var(--text-secondary);
           font-size: 0.9rem;
+        }
+        .plan-helper-text {
+          margin-top: 6px;
+          color: var(--text-muted) !important;
+          font-size: 0.9rem;
+          line-height: 1.5;
         }
         .plan-badge {
           color: var(--primary);
@@ -311,7 +448,7 @@ function RegisterContent() {
           margin-bottom: 2px;
         }
         .compact-grid-address {
-          grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+          grid-template-columns: minmax(220px, 1.45fr) minmax(160px, 1fr) minmax(110px, 0.7fr) !important;
         }
         .compact-grid-owner {
           grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
@@ -334,6 +471,18 @@ function RegisterContent() {
           border-color: var(--border-focus);
           box-shadow: 0 0 0 4px rgba(193, 141, 75, 0.15);
         }
+        .slug-helper-text {
+          margin: 0 0 6px 0;
+          font-size: 0.86rem;
+          line-height: 1.5;
+          color: var(--text-muted);
+        }
+        .field-helper-text {
+          margin: 0 0 6px 0;
+          font-size: 0.86rem;
+          line-height: 1.5;
+          color: var(--text-muted);
+        }
         .slug-prefix {
           padding: 10px 0 10px 14px;
           color: var(--text-muted);
@@ -349,6 +498,20 @@ function RegisterContent() {
           width: 100%;
           margin-top: 4px;
           padding: 13px;
+          color: #ffffff !important;
+          background: linear-gradient(135deg, #d4af37 0%, #775a19 100%);
+          border: 1.5px solid rgba(255, 244, 210, 0.36);
+          box-shadow: 0 12px 28px rgba(197, 160, 89, 0.22);
+        }
+        .register-btn:hover {
+          transform: none !important;
+          background: linear-gradient(135deg, #ddb94d 0%, #886921 100%);
+          color: #ffffff !important;
+          border-color: rgba(255, 246, 221, 0.58);
+          box-shadow: 0 16px 32px rgba(197, 160, 89, 0.26);
+        }
+        .register-btn:active {
+          transform: none !important;
         }
         .error-alert {
           background-color: #fee2e2;
@@ -363,13 +526,32 @@ function RegisterContent() {
           font-size: 0.9rem;
           border-top: 1px solid var(--border-color);
           padding-top: 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .register-footer p {
+          color: var(--text-secondary);
         }
         .login-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 16px;
+          border-radius: 999px;
+          border: 1.5px solid rgba(119, 90, 25, 0.18);
+          background: rgba(255, 255, 255, 0.78);
           color: var(--primary);
           font-weight: 700;
+          box-shadow: 0 10px 24px rgba(119, 90, 25, 0.08);
+          transition: all var(--transition-fast);
         }
         .login-link:hover {
           color: var(--primary-hover);
+          border-color: rgba(119, 90, 25, 0.32);
+          background: rgba(250, 249, 246, 0.96);
+          box-shadow: 0 14px 28px rgba(119, 90, 25, 0.12);
         }
 
         /* SUCCESS VIEW */
@@ -377,30 +559,172 @@ function RegisterContent() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 20px;
+          gap: 24px;
+          max-width: 720px;
+          margin: 0 auto;
+        }
+        .success-register-placeholder {
+          width: 100%;
+          visibility: hidden;
+        }
+        .success-heading-placeholder {
+          height: 44px;
+          width: min(100%, 520px);
+        }
+        .success-text-placeholder {
+          height: 72px;
+          width: min(100%, 640px);
+        }
+        .success-summary-placeholder {
+          min-height: 208px;
+        }
+        .success-btn-placeholder {
+          width: 100%;
+          height: 56px;
+          border-radius: 999px;
+        }
+        .success-icon-shell {
+          width: 112px;
+          height: 112px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.76);
+          border: 1px solid rgba(197, 160, 89, 0.2);
+          box-shadow: 0 24px 54px rgba(45, 0, 77, 0.08);
         }
         .success-icon {
-          font-size: 4rem;
+          font-size: 64px;
+          color: var(--primary);
+          font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 48;
         }
         .success-register h2 {
-          font-size: 2.2rem;
+          font-size: clamp(1.8rem, 4vw, 2.5rem);
+          text-align: center;
+          line-height: 1.08;
         }
         .success-text {
           color: var(--text-secondary);
           font-size: 1.1rem;
+          max-width: 680px;
+        }
+        .success-summary {
+          width: 100%;
+          max-width: 640px;
+          padding: 30px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 248, 243, 0.92) 100%);
+          border: 1px solid rgba(209, 197, 180, 0.28);
+          border-radius: 24px;
+          box-shadow: 0 32px 64px -12px rgba(119, 90, 25, 0.06);
+        }
+        .success-summary-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 20px;
+        }
+        .success-detail-card {
+          padding: 18px 18px 16px;
+          background: rgba(255, 255, 255, 0.82);
+          border: 1px solid rgba(209, 197, 180, 0.22);
+          border-radius: 18px;
+        }
+        .success-label {
+          margin-bottom: 4px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+        }
+        .success-value {
+          font-size: 0.98rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .success-divider {
+          height: 1px;
+          width: 100%;
+          margin: 20px 0;
+          background: rgba(209, 197, 180, 0.35);
+        }
+        .success-note {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          text-align: left;
+        }
+        .success-note-icon {
+          color: var(--primary);
+          margin-top: 2px;
+        }
+        .success-note-title {
+          margin-bottom: 4px;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .success-note-text {
+          color: var(--text-secondary);
+          font-size: 0.95rem;
+          line-height: 1.6;
         }
         .success-btn {
           width: 100%;
+          text-transform: none !important;
+          letter-spacing: 0 !important;
+          font-weight: 700;
         }
-        .next-steps {
-          text-align: left;
+        .success-actions {
           width: 100%;
-          background-color: var(--bg-tertiary);
-          border-left: 4px solid var(--primary);
+          max-width: 640px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
-        .next-steps h4 {
-          font-size: 1.05rem;
-          margin-bottom: 8px;
+        .success-secondary-btn {
+          width: 100%;
+          text-transform: none !important;
+          letter-spacing: 0 !important;
+          font-weight: 700;
+          color: var(--primary) !important;
+          border-width: 1.5px;
+          border-color: rgba(119, 90, 25, 0.18) !important;
+          background: rgba(255, 255, 255, 0.72) !important;
+        }
+        @media (min-width: 768px) {
+          .success-register h2 {
+            white-space: nowrap;
+          }
+          .success-actions {
+            max-width: 620px;
+            flex-direction: row;
+          }
+          .success-btn,
+          .success-secondary-btn {
+            flex: 1;
+          }
+        }
+        @media (max-width: 640px) {
+          .success-card-mode {
+            padding: 40px 20px 28px;
+          }
+          .success-icon-shell {
+            width: 96px;
+            height: 96px;
+          }
+          .success-register h2 {
+            font-size: 1.9rem;
+          }
+          .success-text {
+            font-size: 1rem;
+          }
+          .success-summary {
+            padding: 22px 18px;
+          }
+          .success-summary-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
         }
       `}</style>
     </div>

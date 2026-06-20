@@ -11,7 +11,9 @@ export interface IUser extends Document {
   lastName: string;
   phoneNumber?: string;
   emailVerified: boolean;
-  shopId?: Types.ObjectId; // Null för Super Admins och globala Kunder tills de associeras med en salong
+  shopId?: Types.ObjectId;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,7 +26,9 @@ const UserSchema = new Schema<IUser>({
   lastName: { type: String, required: true, trim: true },
   phoneNumber: { type: String },
   emailVerified: { type: Boolean, default: false },
-  shopId: { type: Schema.Types.ObjectId, ref: 'Shop', index: true }
+  shopId: { type: Schema.Types.ObjectId, ref: 'Shop', index: true },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date }
 }, { timestamps: true });
 
 // ==========================================

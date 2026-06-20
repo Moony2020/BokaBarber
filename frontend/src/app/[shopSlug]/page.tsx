@@ -191,55 +191,46 @@ export default function ShopBookingPage() {
     });
   }, [loadShop]);
 
-  // Fetch upcoming quick slots for today and tomorrow dynamically
+  // Fetch upcoming quick slots — scans up to 7 days ahead until 2 slots are found
   useEffect(() => {
     const fetchUpcomingTimes = async () => {
       if (!shop || services.length === 0 || barbers.length === 0) return;
       setUpcomingLoading(true);
-      
-      const todayStr = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
-      
+
       const defaultService = services[0];
       const defaultBarber = barbers[0];
-      
       const timesList: { label: string; date: string; time: string }[] = [];
-      
-      try {
-        // Fetch today
-        const resToday = await api.getAvailableSlots(shop._id, defaultBarber._id, todayStr, defaultService._id);
-        if (resToday.ok) {
-          const slotsToday = (resToday.data as { slots: string[] }).slots || [];
-          const now = new Date();
-          const currentHour = now.getHours();
-          const currentMin = now.getMinutes();
+      const now = new Date();
 
-          
-          const futureSlots = slotsToday.filter(s => {
-            const [h, m] = s.split(':').map(Number);
-            return h > currentHour || (h === currentHour && m > currentMin);
-          });
-          
-          if (futureSlots.length > 0) {
+      const dayLabel = (offset: number, dateStr: string) => {
+        if (offset === 0) return 'Idag';
+        if (offset === 1) return 'Imorgon';
+        const d = new Date(dateStr + 'T12:00:00');
+        return d.toLocaleDateString('sv-SE', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase());
+      };
+
+      try {
+        for (let offset = 0; offset < 7 && timesList.length < 2; offset++) {
+          const date = new Date(now);
+          date.setDate(now.getDate() + offset);
+          const dateStr = date.toISOString().split('T')[0];
+
+          const res = await api.getAvailableSlots(shop._id, defaultBarber._id, dateStr, defaultService._id);
+          if (!res.ok) continue;
+
+          const slots: string[] = (res.data as { slots: string[] }).slots || [];
+          const available = offset === 0
+            ? slots.filter(s => {
+                const [h, m] = s.split(':').map(Number);
+                return h > now.getHours() || (h === now.getHours() && m > now.getMinutes());
+              })
+            : slots;
+
+          if (available.length > 0) {
             timesList.push({
-              label: `Idag, ${futureSlots[0]}`,
-              date: todayStr,
-              time: futureSlots[0]
-            });
-          }
-        }
-        
-        // Fetch tomorrow
-        const resTomorrow = await api.getAvailableSlots(shop._id, defaultBarber._id, tomorrowStr, defaultService._id);
-        if (resTomorrow.ok) {
-          const slotsTomorrow = (resTomorrow.data as { slots: string[] }).slots || [];
-          if (slotsTomorrow.length > 0) {
-            timesList.push({
-              label: `Imorgon, ${slotsTomorrow[0]}`,
-              date: tomorrowStr,
-              time: slotsTomorrow[0]
+              label: `${dayLabel(offset, dateStr)}, ${available[0]}`,
+              date: dateStr,
+              time: available[0]
             });
           }
         }
@@ -250,7 +241,7 @@ export default function ShopBookingPage() {
         setUpcomingLoading(false);
       }
     };
-    
+
     if (shop && services.length > 0 && barbers.length > 0) {
       fetchUpcomingTimes();
     }
@@ -617,7 +608,7 @@ export default function ShopBookingPage() {
           .confirmation-icon-box {
             width: 76px;
             height: 76px;
-            border-radius: 16px;
+            border-radius: 50%;
             background: linear-gradient(135deg, #f2d78e 0%, #edd08a 100%);
             display: flex;
             align-items: center;
@@ -628,6 +619,8 @@ export default function ShopBookingPage() {
           .confirmation-icon {
             color: #1f1a0f;
             font-size: 34px;
+            line-height: 1;
+            display: block;
           }
 
           .confirmation-heading-block {
@@ -843,11 +836,14 @@ export default function ShopBookingPage() {
   // Dynamic category image assignment based on keywords in name
   const getServiceImage = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes('ritual') || n.includes('luxe') || n.includes('combo') || n.includes('paket')) {
-      return 'https://lh3.googleusercontent.com/aida/AP1WRLshM5CKL_F43l9XzuVZ5UvxVo9Lf-AR_CUp295QY6-IxoAttw2hJdPNJwwfENpy7Sj0ZANa7ENTnhkWGroWR6ihjIATNRsVHAXyrOmTJTTFqSFwsKcdcD3_NSUJsaEvoJuU5JK8RCFNFpYJv_DmSqAJEVwdBY5UklNZPy37EA2ICFI7QXUfBMZBfQfqvs4_hpXneWYGmNPbodosh7ml44FDzohIxFvhDXpxabUHyOqVAhzAu9RbydxKKJc';
-    }
     if (n.includes('skägg') || n.includes('beard') || n.includes('rakning') || n.includes('grooming')) {
       return 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgsX0zM-D9x2XT0kND0cU5n3AW134X7L2u9zFu7oUSekk8FrzJhmPTpCYyz6KKA4SmwOm354hxy-q-N9Bphy9IbWBqS5KEGe3CBF-gZjUXr3ymckckKoNcggWzPYJOFqi86Msx0xW7hTJ_2ye6hwcHEn0iOvNcpFo5wUcna3R0Yal5L2pzZOdbSzOmdojQQHHXmvZThbeH_YIZ5h8xauA5b5ZkkkyxlAIumjrid8Rld1n8WU-QDo_WGnyECxwtsQ9PFvDtDig47Ks';
+    }
+    if (n.includes('klippning') || n.includes('styling') || n.includes('fade')) {
+      return 'https://lh3.googleusercontent.com/aida-public/AB6AXuCTGyYo4zAO-fzNBU8xvv1ku_zSJGMA4uMBumFeB_66g7TWYI5zCTuiYIT113K4K3tRwQIMyrr3lL3t1mVFt-bptNkpvsGZwTuF5AHl1y15nipczGCnJ2WvBDappFs7rK9SwjN0Qbffgv6sH1hA419QwgpOR-cTG4mPPNwPUSpVJ7HKNp7zC4oAH6a_6tMqT1bBMRvKuPsPN3MZ1c0hMuvKZUU1jE77-zAKciJRXbqe74GgXm-ZQDXV6iT3avwJCViAk8Dt6MiQbvQ';
+    }
+    if (n.includes('ritual') || n.includes('luxe') || n.includes('combo') || n.includes('paket')) {
+      return '/trimmer.webp';
     }
     return 'https://lh3.googleusercontent.com/aida-public/AB6AXuCTGyYo4zAO-fzNBU8xvv1ku_zSJGMA4uMBumFeB_66g7TWYI5zCTuiYIT113K4K3tRwQIMyrr3lL3t1mVFt-bptNkpvsGZwTuF5AHl1y15nipczGCnJ2WvBDappFs7rK9SwjN0Qbffgv6sH1hA419QwgpOR-cTG4mPPNwPUSpVJ7HKNp7zC4oAH6a_6tMqT1bBMRvKuPsPN3MZ1c0hMuvKZUU1jE77-zAKciJRXbqe74GgXm-ZQDXV6iT3avwJCViAk8Dt6MiQbvQ';
   };
@@ -1008,7 +1004,15 @@ export default function ShopBookingPage() {
                         >
                           <div className="service-card-image-box">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={getServiceImage(s.name)} alt={s.name} className="service-card-image" />
+                            <img
+                              src={getServiceImage(s.name)}
+                              alt={s.name}
+                              className="service-card-image"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = '/trimmer.webp';
+                              }}
+                            />
                             {isPremium && <span className="service-card-badge">POPULÄR</span>}
                           </div>
                           <div className="service-card-info-box">
@@ -1222,7 +1226,7 @@ export default function ShopBookingPage() {
                     
                     {!upcomingLoading && upcomingTimes.length === 0 && (
                       <p className="text-sm text-[#444444]/75 text-center py-4" style={{ textAlign: 'center', color: 'rgba(68, 68, 68, 0.75)' }}>
-                        Inga lediga tider idag eller imorgon.
+                        Inga lediga tider de närmaste dagarna.
                       </p>
                     )}
                     
@@ -1449,13 +1453,19 @@ export default function ShopBookingPage() {
         /* 👑 HEADER */
         .booking-title {
           font-family: var(--font-primary, 'Playfair Display', serif);
-          font-size: 2.9rem;
+          font-size: 2.45rem;
           font-weight: 700;
           color: #4b0082;
           margin-bottom: 8px;
           background: linear-gradient(135deg, #4b0082 0%, #7b41b3 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+        }
+
+        @media (max-width: 768px) {
+          .booking-title {
+            font-size: 2rem;
+          }
         }
 
         .booking-subtitle {
@@ -1748,9 +1758,9 @@ export default function ShopBookingPage() {
         }
 
         .service-card-desc {
-          font-size: 0.85rem;
-          color: rgba(28, 27, 31, 0.65);
-          line-height: 1.5;
+          font-size: 1rem;
+          color: rgba(28, 27, 31, 0.7);
+          line-height: 1.6;
           margin-bottom: 20px;
           flex-grow: 1;
         }
@@ -1922,10 +1932,16 @@ export default function ShopBookingPage() {
         }
 
         .calendar-days-grid-premium {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
+          display: flex;
+          flex-direction: row;
           gap: 8px;
           margin-bottom: 36px;
+          overflow-x: auto;
+          padding-bottom: 4px;
+          scrollbar-width: none;
+        }
+        .calendar-days-grid-premium::-webkit-scrollbar {
+          display: none;
         }
 
         .calendar-day-btn {
@@ -1940,6 +1956,8 @@ export default function ShopBookingPage() {
           cursor: pointer;
           transition: all 0.3s ease;
           outline: none;
+          flex: 1 0 48px;
+          min-width: 48px;
         }
 
         .calendar-day-btn:hover {
@@ -2507,10 +2525,11 @@ export default function ShopBookingPage() {
 
         .arrow-icon {
           transition: transform 0.3s ease;
+          transform: translateY(-3px);
         }
 
         .upcoming-time-btn-premium:hover .arrow-icon {
-          transform: translateX(4px);
+          transform: translateX(4px) translateY(-3px);
         }
 
         .mini-spinner {

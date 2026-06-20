@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/utils/api';
@@ -10,7 +10,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [nextPath, setNextPath] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('next');
+      setNextPath(next);
+    } catch {
+      setNextPath(null);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,19 +32,13 @@ export default function LoginPage() {
       const res = await api.login(email, password);
 
       if (res.ok) {
-        const data = res.data as { user: { role: string; shopId?: string; id: string; email: string; firstName: string; lastName: string } };
+        const data = res.data as { token?: string; user: { role: string; shopId?: string; id: string; email: string; firstName: string; lastName: string } };
+        if (data.token) localStorage.setItem('authToken', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         window.dispatchEvent(new Event('auth-change'));
 
-        if (data.user.role === 'super_admin') {
-          router.push('/super');
-        } else if (data.user.role === 'shop_admin') {
-          router.push(`/admin/${data.user.shopId}`);
-        } else {
-          router.push('/');
-        }
-
-        router.refresh();
+        // Always go through /dashboard which handles the redirect safely
+        window.location.href = nextPath && nextPath.startsWith('/') && nextPath !== '/login' ? nextPath : '/dashboard';
       } else {
         const errData = res.data as { error?: string };
         setErrorMsg(errData.error || 'Felaktigt lösenord eller e-postadress.');
@@ -69,7 +74,12 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Lösenord</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label className="form-label" style={{ margin: 0 }}>Lösenord</label>
+              <Link href="/glomt-losenord" style={{ fontSize: '0.82rem', color: 'var(--accent, #b8860b)', textDecoration: 'none' }}>
+                Glömt lösenord?
+              </Link>
+            </div>
             <input
               type="password"
               required
@@ -96,7 +106,7 @@ export default function LoginPage() {
       <style jsx>{`
         .login-container {
           min-height: calc(100vh - 85px);
-          padding: 130px 24px 60px 24px;
+          padding: 88px 24px 60px 24px;
           display: flex;
           justify-content: center;
           align-items: flex-start;
@@ -104,7 +114,7 @@ export default function LoginPage() {
         }
         @media (max-width: 768px) {
           .login-container {
-            padding-top: 100px;
+            padding-top: 72px;
           }
         }
         .login-card {
@@ -144,6 +154,21 @@ export default function LoginPage() {
           width: 100%;
           margin-top: 4px;
           padding: 12px;
+          font-size: 0.92rem;
+          color: #ffffff !important;
+          background: linear-gradient(135deg, #d4af37 0%, #775a19 100%);
+          border: 1.5px solid rgba(255, 244, 210, 0.36);
+          box-shadow: 0 12px 28px rgba(197, 160, 89, 0.22);
+        }
+        .login-btn:hover {
+          transform: none !important;
+          background: linear-gradient(135deg, #ddb94d 0%, #886921 100%);
+          color: #ffffff !important;
+          border-color: rgba(255, 246, 221, 0.58);
+          box-shadow: 0 16px 32px rgba(197, 160, 89, 0.26);
+        }
+        .login-btn:active {
+          transform: none !important;
         }
         .error-alert {
           background-color: #fee2e2;

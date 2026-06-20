@@ -3,52 +3,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
+import './admin-dashboard.css';
 
 interface DashboardStats {
-  todayBookings: number;
-  monthRevenue: number;
-  totalCustomers: number;
-  activeBarbers: number;
+  todayBookings: number; monthRevenue: number;
+  totalCustomers: number; activeBarbers: number;
 }
-
 interface BookingItem {
-  _id: string;
-  customerName: string;
-  serviceName: string;
-  servicePrice: number;
-  barberName: string;
-  startTime: string;
-  endTime: string;
-  totalPrice: number;
-  status: string;
-  paymentStatus: string;
+  _id: string; customerName: string; serviceName: string; servicePrice: number;
+  barberName: string; startTime: string; endTime: string; totalPrice: number;
+  status: string; paymentStatus: string;
 }
-
 interface ServiceItem {
-  _id: string;
-  name: string;
-  description?: string;
-  durationMinutes: number;
-  price: number;
-  isActive: boolean;
+  _id: string; name: string; description?: string;
+  durationMinutes: number; price: number; isActive: boolean;
 }
-
 interface BarberItem {
-  _id: string;
-  name: string;
-  email: string;
-  bio?: string;
-  isActive: boolean;
-  services: string[];
+  _id: string; name: string; email: string; bio?: string;
+  isActive: boolean; services: string[];
 }
-
 interface CustomerItem {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  bookingCount: number;
+  _id: string; firstName: string; lastName: string;
+  email: string; phoneNumber: string; bookingCount: number;
 }
 
 export default function ShopAdminDashboard() {
@@ -56,49 +32,38 @@ export default function ShopAdminDashboard() {
   const router = useRouter();
   const shopId = params.shopId as string;
 
-  const [activeTab, setActiveTab] = useState<'oversikt' | 'kalender' | 'tjanster' | 'personal' | 'kunder' | 'installningar'>('oversikt');
+  const [activeTab, setActiveTab] = useState<'oversikt'|'kalender'|'tjanster'|'personal'|'kunder'|'installningar'>('oversikt');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState<'bas'|'pro'|null>(null);
+  const [paypalLoading, setPaypalLoading] = useState<'bas'|'pro'|null>(null);
 
-  // Real data states
   const [stats, setStats] = useState<DashboardStats>({ todayBookings: 0, monthRevenue: 0, totalCustomers: 0, activeBarbers: 0 });
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [barbers, setBarbers] = useState<BarberItem[]>([]);
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
 
-  // Service form
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
-  const [newServiceDuration, setNewServiceDuration] = useState<number | ''>(30);
-  const [newServicePrice, setNewServicePrice] = useState<number | ''>(400);
+  const [newServiceDuration, setNewServiceDuration] = useState<number|''>(30);
+  const [newServicePrice, setNewServicePrice] = useState<number|''>(400);
   const [savingService, setSavingService] = useState(false);
 
-  // Settings form
-  const [cancellationHours, setCancellationHours] = useState<number | ''>(24);
-  const [depositPct, setDepositPct] = useState<number | ''>(0);
-  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<('swish' | 'card' | 'cash')[]>(['swish', 'card']);
+  const [cancellationHours, setCancellationHours] = useState<number|''>(24);
+  const [depositPct, setDepositPct] = useState<number|''>(0);
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<('swish'|'card'|'cash')[]>(['swish','card']);
   const [openTime, setOpenTime] = useState('09:00');
   const [closeTime, setCloseTime] = useState('18:00');
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Toast state
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
-  };
-
-  // Shop details
+  const [toast, setToast] = useState<{message:string;type:'success'|'error'|'info'}|null>(null);
   const [shopName, setShopName] = useState('');
   const [shopSlug, setShopSlug] = useState('');
-  const [subscription, setSubscription] = useState<{ status: string; trialEndsAt: string; gracePeriodEndsAt?: string } | null>(null);
+  const [subscription, setSubscription] = useState<{status:string;trialEndsAt:string;gracePeriodEndsAt?:string}|null>(null);
   const [newBookingNotifications, setNewBookingNotifications] = useState<string[]>([]);
 
-  // Barber form
   const [newBarberFirstName, setNewBarberFirstName] = useState('');
   const [newBarberLastName, setNewBarberLastName] = useState('');
   const [newBarberEmail, setNewBarberEmail] = useState('');
@@ -107,64 +72,90 @@ export default function ShopAdminDashboard() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [savingBarber, setSavingBarber] = useState(false);
 
-  // Fetch shop details on load
+  const showToast = (message: string, type: 'success'|'error'|'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4500);
+  };
+
+  const handleCheckout = async (plan: 'bas'|'pro') => {
+    setCheckoutLoading(plan);
+    try {
+      const res = await api.createCheckout(shopId, plan);
+      if (res.ok) { const { url } = res.data as { url: string }; window.location.href = url; }
+      else { const d = res.data as { error?: string }; showToast(d.error || 'Kunde inte starta betalning.', 'error'); }
+    } catch { showToast('Nätverksfel. Kontrollera att servern körs.', 'error'); }
+    finally { setCheckoutLoading(null); }
+  };
+
+  const handlePayPalCheckout = async (plan: 'bas'|'pro') => {
+    setPaypalLoading(plan);
+    try {
+      const res = await api.createPayPalOrder(shopId, plan);
+      if (res.ok) { const { approveUrl } = res.data as { approveUrl: string }; window.location.href = approveUrl; }
+      else { const d = res.data as { error?: string }; showToast(d.error || 'Kunde inte starta PayPal-betalning.', 'error'); }
+    } catch { showToast('Nätverksfel. Kontrollera att servern körs.', 'error'); }
+    finally { setPaypalLoading(null); }
+  };
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const payment = p.get('payment'), sessionId = p.get('session_id');
+    const paypal = p.get('paypal'), orderId = p.get('token');
+    const plan = (p.get('plan') || 'bas') as 'bas'|'pro';
+    if (payment === 'success' && sessionId) {
+      api.verifyStripeSession(shopId, sessionId).then(res => {
+        if (res.ok) { showToast('Betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); window.history.replaceState({}, '', `/admin/${shopId}`); loadDashboard(); }
+        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
+      });
+    } else if (payment === 'cancelled') {
+      showToast('Betalningen avbröts. Välj en plan för att fortsätta.', 'error');
+      window.history.replaceState({}, '', `/admin/${shopId}`);
+    } else if (paypal === 'success' && orderId) {
+      api.capturePayPalOrder(shopId, orderId, plan).then(res => {
+        if (res.ok) { showToast('PayPal-betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); window.history.replaceState({}, '', `/admin/${shopId}`); loadDashboard(); }
+        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
+      });
+    } else if (paypal === 'cancelled') {
+      showToast('PayPal-betalningen avbröts. Välj en plan för att fortsätta.', 'error');
+      window.history.replaceState({}, '', `/admin/${shopId}`);
+    }
+  }, [shopId]);
+
   useEffect(() => {
     const fetchShopInfo = async () => {
       try {
         const res = await api.adminGetSettings(shopId);
         if (res.ok) {
           const d = res.data as { shop?: { name: string; slug: string } };
-          if (d.shop) {
-            setShopName(d.shop.name);
-            setShopSlug(d.shop.slug);
-          }
+          if (d.shop) { setShopName(d.shop.name); setShopSlug(d.shop.slug); }
         }
-      } catch (err) {
-        console.error('Failed to load shop info', err);
-      }
+      } catch {}
     };
-    if (shopId) {
-      fetchShopInfo();
-    }
+    if (shopId) fetchShopInfo();
   }, [shopId]);
 
   useEffect(() => {
-    const verifyAuth = async (isInitial = false) => {
+    const verifyAuth = async () => {
       try {
         const res = await api.me();
         if (res.ok) {
           const data = res.data as { user: { role: string; shopId?: string } };
-          if (data.user.role !== 'shop_admin' && data.user.role !== 'super_admin') {
-            router.push('/');
-          }
-        } else {
-          if (isInitial || res.status === 401 || res.status === 403) {
-            router.push('/login');
-          }
-        }
-      } catch (err) {
-        console.error('Auth verification failed', err);
-        if (isInitial) {
-          router.push('/login');
-        }
-      }
+          if (data.user.role !== 'shop_admin' && data.user.role !== 'super_admin') setAuthError('Din användare har inte behörighet att komma åt instrumentpanelen.');
+          else setAuthError('');
+        } else if (res.status === 401) setAuthError('Din session har gått ut. Vänligen logga in igen.');
+        else setAuthError('Kunde inte verifiera behörighet. Kontrollera att servern är igång.');
+      } catch { setAuthError('Nätverksfel — kontrollera att servern körs på localhost:5000.'); }
     };
-    verifyAuth(true);
+    verifyAuth();
+    const interval = setInterval(verifyAuth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-    const authCheckInterval = setInterval(() => verifyAuth(false), 30000);
-    return () => clearInterval(authCheckInterval);
-  }, [router]);
-
-  // Load data based on active tab
   const loadDashboard = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const res = await api.adminDashboard(shopId);
-      if (res.ok) {
-        const d = res.data as { todayBookings: number; monthRevenue: number; totalCustomers: number; activeBarbers: number; subscription: any };
-        setStats(d);
-        setSubscription(d.subscription);
-      }
+      if (res.ok) { const d = res.data as any; setStats(d); setSubscription(d.subscription); }
       const bk = await api.adminBookings(shopId);
       if (bk.ok) setBookings((bk.data as { bookings: BookingItem[] }).bookings || []);
     } catch { setError('Kunde inte hämta data från servern.'); }
@@ -173,29 +164,20 @@ export default function ShopAdminDashboard() {
 
   const loadServices = useCallback(async () => {
     setLoading(true);
-    try {
-      const res = await api.adminServices(shopId);
-      if (res.ok) setServices((res.data as { services: ServiceItem[] }).services || []);
-    } catch { setError('Kunde inte hämta tjänster.'); }
-    finally { setLoading(false); }
+    try { const res = await api.adminServices(shopId); if (res.ok) setServices((res.data as { services: ServiceItem[] }).services || []); }
+    catch { setError('Kunde inte hämta tjänster.'); } finally { setLoading(false); }
   }, [shopId]);
 
   const loadBarbers = useCallback(async () => {
     setLoading(true);
-    try {
-      const res = await api.adminBarbers(shopId);
-      if (res.ok) setBarbers((res.data as { barbers: BarberItem[] }).barbers || []);
-    } catch { setError('Kunde inte hämta frisörer.'); }
-    finally { setLoading(false); }
+    try { const res = await api.adminBarbers(shopId); if (res.ok) setBarbers((res.data as { barbers: BarberItem[] }).barbers || []); }
+    catch { setError('Kunde inte hämta frisörer.'); } finally { setLoading(false); }
   }, [shopId]);
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
-    try {
-      const res = await api.adminCustomers(shopId);
-      if (res.ok) setCustomers((res.data as { customers: CustomerItem[] }).customers || []);
-    } catch { setError('Kunde inte hämta kunder.'); }
-    finally { setLoading(false); }
+    try { const res = await api.adminCustomers(shopId); if (res.ok) setCustomers((res.data as { customers: CustomerItem[] }).customers || []); }
+    catch { setError('Kunde inte hämta kunder.'); } finally { setLoading(false); }
   }, [shopId]);
 
   const loadSettings = useCallback(async () => {
@@ -203,58 +185,38 @@ export default function ShopAdminDashboard() {
     try {
       const res = await api.adminGetSettings(shopId);
       if (res.ok) {
-        const d = res.data as { settings: { cancellationWindowHours: number; depositPercentage: number; acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[]; openingHours: { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string }[] } };
+        const d = res.data as { settings: { cancellationWindowHours: number; depositPercentage: number; acceptedPaymentMethods?: ('swish'|'card'|'cash')[]; openingHours: { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string }[] } };
         if (d.settings) {
           setCancellationHours(d.settings.cancellationWindowHours);
           setDepositPct(d.settings.depositPercentage);
-          if (d.settings.acceptedPaymentMethods) {
-            setAcceptedPaymentMethods(d.settings.acceptedPaymentMethods);
-          } else {
-            setAcceptedPaymentMethods(['swish', 'card']);
-          }
+          if (d.settings.acceptedPaymentMethods) setAcceptedPaymentMethods(d.settings.acceptedPaymentMethods);
           const mon = d.settings.openingHours?.find(h => h.dayOfWeek === 1);
           if (mon) { setOpenTime(mon.openTime); setCloseTime(mon.closeTime); }
         }
       }
-    } catch { setError('Kunde inte hämta inställningar.'); }
-    finally { setLoading(false); }
+    } catch { setError('Kunde inte hämta inställningar.'); } finally { setLoading(false); }
   }, [shopId]);
 
-  // Silently check for new bookings in the background
   const pollDashboardSilently = useCallback(async (currentBookings: BookingItem[]) => {
     try {
       const bk = await api.adminBookings(shopId);
       if (bk.ok) {
-        const freshBookings = (bk.data as { bookings: BookingItem[] }).bookings || [];
-        
-        // Find if there are any new bookings
+        const fresh = (bk.data as { bookings: BookingItem[] }).bookings || [];
         const existingIds = new Set(currentBookings.map(b => b._id));
-        const newArrivals = freshBookings.filter(b => !existingIds.has(b._id) && b.status === 'confirmed');
-        
+        const newArrivals = fresh.filter(b => !existingIds.has(b._id) && b.status === 'confirmed');
         if (newArrivals.length > 0) {
-          const newNames = newArrivals.map(b => `${b.customerName} (${b.serviceName})`);
-          setNewBookingNotifications(prev => [...prev, ...newNames]);
-          setBookings(freshBookings);
-          
-          const res = await api.adminDashboard(shopId);
-          if (res.ok) {
-            setStats(res.data as DashboardStats);
-          }
+          setNewBookingNotifications(prev => [...prev, ...newArrivals.map(b => `${b.customerName} (${b.serviceName})`)]);
+          setBookings(fresh);
+          const r = await api.adminDashboard(shopId);
+          if (r.ok) setStats(r.data as DashboardStats);
         }
       }
-    } catch (err) {
-      console.error('Silent poll failed', err);
-    }
+    } catch {}
   }, [shopId]);
 
-  // Set up polling interval for real-time updates
   useEffect(() => {
     if (activeTab !== 'oversikt' && activeTab !== 'kalender') return;
-    
-    const interval = setInterval(() => {
-      pollDashboardSilently(bookings);
-    }, 10000); // Check every 10 seconds
-    
+    const interval = setInterval(() => pollDashboardSilently(bookings), 10000);
     return () => clearInterval(interval);
   }, [activeTab, bookings, pollDashboardSilently]);
 
@@ -267,322 +229,380 @@ export default function ShopAdminDashboard() {
   }, [activeTab, loadDashboard, loadServices, loadBarbers, loadCustomers, loadSettings]);
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
-    const res = await api.adminUpdateBookingStatus(shopId, bookingId, newStatus);
-    if (res.ok) loadDashboard();
+    await api.adminUpdateBookingStatus(shopId, bookingId, newStatus);
+    loadDashboard();
   };
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newServiceDuration === '' || newServicePrice === '') {
-      setError('Tid och pris måste anges.');
-      return;
-    }
+    if (newServiceDuration === '' || newServicePrice === '') { setError('Tid och pris måste anges.'); return; }
     setSavingService(true);
-    const res = await api.adminCreateService(shopId, {
-      name: newServiceName, description: newServiceDesc,
-      durationMinutes: Number(newServiceDuration), price: Number(newServicePrice)
-    });
+    const res = await api.adminCreateService(shopId, { name: newServiceName, description: newServiceDesc, durationMinutes: Number(newServiceDuration), price: Number(newServicePrice) });
     setSavingService(false);
-    if (res.ok) {
-      setNewServiceName('');
-      setNewServiceDesc('');
-      setNewServiceDuration(30);
-      setNewServicePrice(400);
-      loadServices();
-    }
+    if (res.ok) { setNewServiceName(''); setNewServiceDesc(''); setNewServiceDuration(30); setNewServicePrice(400); showToast('Tjänst skapad!', 'success'); loadServices(); }
+    else showToast('Kunde inte spara tjänsten.', 'error');
   };
 
-  const handleToggleService = async (serviceId: string) => {
-    await api.adminToggleService(shopId, serviceId);
-    loadServices();
-  };
+  const handleToggleService = async (serviceId: string) => { await api.adminToggleService(shopId, serviceId); loadServices(); };
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
-    await api.adminUpdateSettings(shopId, {
-      cancellationWindowHours: cancellationHours === '' ? 0 : Number(cancellationHours),
-      depositPercentage: depositPct === '' ? 0 : Number(depositPct),
-      acceptedPaymentMethods
-    });
+    await api.adminUpdateSettings(shopId, { cancellationWindowHours: cancellationHours === '' ? 0 : Number(cancellationHours), depositPercentage: depositPct === '' ? 0 : Number(depositPct), acceptedPaymentMethods });
     setSavingSettings(false);
     showToast('Inställningar sparade!', 'success');
   };
 
   const handleAddBarber = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingBarber(true);
-    setError('');
+    e.preventDefault(); setSavingBarber(true); setError('');
     try {
-      const res = await api.adminAddBarber(shopId, {
-        firstName: newBarberFirstName,
-        lastName: newBarberLastName,
-        email: newBarberEmail,
-        password: newBarberPassword,
-        bio: newBarberBio,
-        serviceIds: selectedServices
-      });
-      if (res.ok) {
-        setNewBarberFirstName('');
-        setNewBarberLastName('');
-        setNewBarberEmail('');
-        setNewBarberPassword('');
-        setNewBarberBio('');
-        setSelectedServices([]);
-        loadBarbers();
-      } else {
-        const d = res.data as { error?: string };
-        setError(d.error || 'Kunde inte lägga till personal.');
-      }
-    } catch {
-      setError('Ett nätverksfel uppstod.');
-    } finally {
-      setSavingBarber(false);
-    }
+      const res = await api.adminAddBarber(shopId, { firstName: newBarberFirstName, lastName: newBarberLastName, email: newBarberEmail, password: newBarberPassword, bio: newBarberBio, serviceIds: selectedServices });
+      if (res.ok) { setNewBarberFirstName(''); setNewBarberLastName(''); setNewBarberEmail(''); setNewBarberPassword(''); setNewBarberBio(''); setSelectedServices([]); showToast('Personal tillagd!', 'success'); loadBarbers(); }
+      else { const d = res.data as { error?: string }; showToast(d.error || 'Kunde inte lägga till personal.', 'error'); }
+    } catch { showToast('Ett nätverksfel uppstod.', 'error'); } finally { setSavingBarber(false); }
   };
 
-  const formatTime = (iso: string) => {
-    const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
+  const formatTime = (iso: string) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  const statusLabel = (s: string) => ({ confirmed:'Bekräftad', paid:'Betald', completed:'Slutförd', cancelled_by_customer:'Avbokad', cancelled_by_shop:'Avbokad', no_show:'Utebliven', pending:'Väntande', rescheduled:'Ombokad' }[s] || s);
+  const badgeClass = (s: string) => { if (s==='confirmed') return 'bb-badge-confirmed'; if (s==='paid') return 'bb-badge-paid'; if (s==='completed') return 'bb-badge-completed'; if (s==='pending') return 'bb-badge-pending'; return 'bb-badge-cancelled'; };
+  const getInitials = (name: string) => name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
 
-  const statusLabel = (s: string) => {
-    const map: Record<string, string> = {
-      confirmed: 'Bekräftad', paid: 'Betald', completed: 'Slutförd',
-      cancelled_by_customer: 'Avbokad (kund)', cancelled_by_shop: 'Avbokad (salong)',
-      no_show: 'Utebliven', pending: 'Väntande', rescheduled: 'Ombokad'
-    };
-    return map[s] || s;
-  };
+  // ── Early returns ──────────────────────────────────────────
+  if (authError) {
+    return (
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fbf9f9', padding:24 }}>
+        <div style={{ background:'white', borderRadius:16, padding:'48px 40px', maxWidth:480, width:'100%', textAlign:'center', boxShadow:'0 20px 50px rgba(119,90,25,0.08)', border:'1px solid #d1c5b4' }}>
+          <div style={{ fontSize:'2.5rem', marginBottom:16 }}>🔐</div>
+          <h2 style={{ fontFamily:'Playfair Display,serif', fontSize:'1.8rem', color:'#775a19', marginBottom:12 }}>Åtkomst nekad</h2>
+          <p style={{ color:'#4e4639', lineHeight:1.6, marginBottom:28 }}>{authError}</p>
+          <a href="/login" style={{ display:'inline-block', background:'#c5a059', color:'white', fontWeight:700, padding:'14px 32px', borderRadius:8, textDecoration:'none' }}>Logga in →</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !subscription) {
+    return (
+      <div style={{ minHeight:'50vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div className="bb-spinner" />
+      </div>
+    );
+  }
+
+  const isPaywallActive = !loading && subscription && (
+    subscription.status === 'suspended' || subscription.status === 'cancelled' ||
+    (subscription.status === 'trial' && new Date(subscription.trialEndsAt) < new Date())
+  );
+
+  if (isPaywallActive) {
+    return (
+      <div style={{ minHeight:'60vh', background:'#fbf9f9', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', padding:'48px 24px 80px' }}>
+        {toast && (
+          <div className="bb-toasts">
+            <div className={`bb-toast bb-toast-${toast.type}`}>
+              <div className="bb-toast-body">
+                <span>{toast.type==='success'?'✅':'❌'}</span>
+                <strong>{toast.message}</strong>
+              </div>
+              <button onClick={()=>setToast(null)} className="bb-toast-close">×</button>
+            </div>
+          </div>
+        )}
+        <div style={{ width:'100%', maxWidth:660 }}>
+          <div style={{ textAlign:'center', marginBottom:48 }}>
+            <div style={{ fontSize:'3rem', marginBottom:16 }}>⏰</div>
+            <h2 style={{ fontFamily:'Playfair Display,serif', fontSize:'2rem', color:'#775a19', marginBottom:10 }}>
+              {subscription!.status==='cancelled' ? 'Abonnemang uppsagt' : 'Din provperiod har gått ut'}
+            </h2>
+            <p style={{ color:'#4e4639', fontSize:'1rem', lineHeight:1.6 }}>
+              Välj en plan nedan för att aktivera din salong.
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:24 }}>
+            {/* BAS */}
+            <div style={{ background:'#fff', border:'1.5px solid #B59F67', borderRadius:16, padding:'28px 24px 24px', display:'flex', flexDirection:'column', boxShadow:'0 10px 30px rgba(197,160,89,0.08)' }}>
+              <span style={{ alignSelf:'flex-start', padding:'4px 12px', borderRadius:9999, background:'rgba(197,160,89,0.1)', color:'#775a19', fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.08em', marginBottom:16 }}>BAS</span>
+              <div style={{ fontSize:'2.8rem', fontWeight:700, color:'#775a19', lineHeight:1, marginBottom:16 }}>299 kr<span style={{ fontSize:'1rem', color:'#7f7667', fontWeight:400, marginLeft:4 }}>/mån</span></div>
+              <ul style={{ listStyle:'none', padding:0, margin:'0 0 20px', display:'flex', flexDirection:'column', gap:8, flexGrow:1 }}>
+                {['Upp till 2 anställda','Digital kalender','SMS-påminnelser'].map(f=>(
+                  <li key={f} style={{ display:'flex', gap:8, color:'#4e4639', fontSize:'0.9rem' }}><span style={{ color:'#c5a059', fontWeight:700 }}>✓</span>{f}</li>
+                ))}
+              </ul>
+              <button onClick={()=>handleCheckout('bas')} disabled={checkoutLoading!==null||paypalLoading!==null} style={{ width:'100%', padding:'12px', background:'transparent', border:'1.5px solid #c5a059', color:'#775a19', borderRadius:8, fontWeight:700, fontSize:'0.9rem', cursor:'pointer', marginBottom:8 }}>
+                {checkoutLoading==='bas'?'Laddar...':'💳 Betala med kort'}
+              </button>
+              <button onClick={()=>handlePayPalCheckout('bas')} disabled={checkoutLoading!==null||paypalLoading!==null} style={{ width:'100%', padding:'12px', background:'#FFC439', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
+                {paypalLoading==='bas'?'Laddar...':<><span style={{ fontFamily:'Arial,sans-serif', fontWeight:800, color:'#003087' }}>Pay</span><span style={{ fontFamily:'Arial,sans-serif', fontWeight:800, color:'#009cde' }}>Pal</span></>}
+              </button>
+            </div>
+            {/* PRO */}
+            <div style={{ background:'#fff', border:'2px solid #B59F67', borderRadius:16, padding:'28px 24px 24px', display:'flex', flexDirection:'column', position:'relative', boxShadow:'0 20px 40px rgba(119,90,25,0.1)' }}>
+              <div style={{ position:'absolute', top:-13, right:24, background:'linear-gradient(135deg,#dfba6b,#B59F67)', color:'#fff', fontSize:'0.6rem', fontWeight:700, padding:'4px 14px', borderRadius:9999, letterSpacing:1 }}>REKOMMENDERAD</div>
+              <span style={{ alignSelf:'flex-start', padding:'4px 12px', borderRadius:9999, background:'rgba(233,193,118,0.16)', color:'#775a19', fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.08em', marginBottom:16 }}>PROFESSIONAL</span>
+              <div style={{ fontSize:'2.8rem', fontWeight:700, background:'linear-gradient(135deg,#d4af37,#775a19)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', lineHeight:1, marginBottom:16 }}>
+                399 kr<span style={{ fontSize:'1rem', fontWeight:400, WebkitTextFillColor:'#7f7667', color:'#7f7667', marginLeft:4 }}>/mån</span>
+              </div>
+              <ul style={{ listStyle:'none', padding:0, margin:'0 0 20px', display:'flex', flexDirection:'column', gap:8, flexGrow:1 }}>
+                {['Obegränsat antal anställda','Allt i Bas-planen','Avancerad lagerhantering','Ekonomisk rapportering','Prioriterad support 24/7'].map((f,i)=>(
+                  <li key={i} style={{ display:'flex', gap:8, color:'#4e4639', fontSize:'0.9rem' }}><span style={{ color:'#775a19', fontWeight:700 }}>✓</span>{f}</li>
+                ))}
+              </ul>
+              <button onClick={()=>handleCheckout('pro')} disabled={checkoutLoading!==null||paypalLoading!==null} style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#c5a059,#775a19)', border:'none', color:'white', borderRadius:8, fontWeight:700, fontSize:'0.9rem', cursor:'pointer', marginBottom:8 }}>
+                {checkoutLoading==='pro'?'Laddar...':'💳 Betala med kort'}
+              </button>
+              <button onClick={()=>handlePayPalCheckout('pro')} disabled={checkoutLoading!==null||paypalLoading!==null} style={{ width:'100%', padding:'12px', background:'#FFC439', border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
+                {paypalLoading==='pro'?'Laddar...':<><span style={{ fontFamily:'Arial,sans-serif', fontWeight:800, color:'#003087' }}>Pay</span><span style={{ fontFamily:'Arial,sans-serif', fontWeight:800, color:'#009cde' }}>Pal</span></>}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main admin layout ──────────────────────────────────────
+  const today = new Date().toLocaleDateString('sv-SE', { day:'numeric', month:'long', year:'numeric' });
+  const navItems = [
+    { key:'oversikt', icon:'dashboard', label:'Översikt' },
+    { key:'kalender', icon:'calendar_today', label:'Bokningar' },
+    { key:'tjanster', icon:'content_cut', label:'Tjänster' },
+    { key:'personal', icon:'group', label:'Personal' },
+    { key:'kunder', icon:'person', label:'Kunder' },
+    { key:'installningar', icon:'settings', label:'Inställningar' },
+  ];
 
   return (
-    <div className="admin-dashboard-wrapper animate-fade-in">
-      {/* Global Viewport-Safe Toast Notifications Overlay */}
-      {(newBookingNotifications.length > 0 || toast) && (
-        <div className="toast-notification-container">
+    <>
+      {/* Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+      `}</style>
+
+      {/* Toasts */}
+      {(toast || newBookingNotifications.length > 0) && (
+        <div className="bb-toasts">
           {toast && (
-            <div className={`toast-notification animate-slide-in toast-${toast.type} toast-border-${toast.type}`}>
-              <div className="toast-content flex-center-gap-8" >
-                <span className="text-1-2rem" >{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
-                <strong className="text-slate-800" >{toast.message}</strong>
+            <div className={`bb-toast bb-toast-${toast.type}`}>
+              <div className="bb-toast-body">
+                <span>{toast.type==='success'?'✅':toast.type==='error'?'❌':'ℹ️'}</span>
+                <strong style={{color:'#1b1c1c',fontSize:14}}>{toast.message}</strong>
               </div>
-              <button onClick={() => setToast(null)} className="toast-close">×</button>
+              <button onClick={()=>setToast(null)} className="bb-toast-close">×</button>
             </div>
           )}
-          {newBookingNotifications.map((notif, idx) => (
-            <div key={idx} className="toast-notification animate-slide-in">
-              <div className="toast-content">
-                🔔 <strong>Ny bokning inkommen!</strong>
-                <p className="toast-desc" >
-                  {notif}
-                </p>
-              </div>
-              <button
-                onClick={() => setNewBookingNotifications(prev => prev.filter((_, i) => i !== idx))}
-                className="toast-close"
-              >
-                ×
-              </button>
+          {newBookingNotifications.map((n,i)=>(
+            <div key={i} className="bb-toast bb-toast-info">
+              <div className="bb-toast-body">🔔 <strong>Ny bokning!</strong> {n}</div>
+              <button onClick={()=>setNewBookingNotifications(p=>p.filter((_,j)=>j!==i))} className="bb-toast-close">×</button>
             </div>
           ))}
         </div>
       )}
 
-      <div className="admin-sidebar">
-        <div className="sidebar-brand">
-          💈 <span>{shopName || 'BokaBarber'}</span>
-        </div>
-        <nav className="sidebar-nav">
-          {[
-            { key: 'oversikt', icon: '📊', label: 'Översikt' },
-            { key: 'kalender', icon: '📅', label: 'Bokningar' },
-            { key: 'tjanster', icon: '✂️', label: 'Tjänster' },
-            { key: 'personal', icon: '💈', label: 'Personal' },
-            { key: 'kunder', icon: '👥', label: 'Kunder' },
-            { key: 'installningar', icon: '⚙️', label: 'Inställningar' }
-          ].map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key as typeof activeTab)} className={activeTab === tab.key ? 'active' : ''}>
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <div className="bb-wrap">
+        {/* ── Sidebar ── */}
+        <aside className="bb-sidebar">
+          <div className="bb-sidebar-top">
+            <div className="bb-salon-logo">💈</div>
+            <div>
+              <div className="bb-salon-name">{shopName || 'Salong'}</div>
+              <div className="bb-salon-role">Salon Admin</div>
+            </div>
+          </div>
 
-      <div className="admin-main-panel">
-        <header className="admin-top-bar">
-          <h2>{activeTab === 'oversikt' ? 'Översikt' : activeTab === 'kalender' ? 'Alla Bokningar' : activeTab === 'tjanster' ? 'Tjänster' : activeTab === 'personal' ? 'Personal' : activeTab === 'kunder' ? 'Kundregister' : 'Inställningar'}</h2>
-          <div className="flex-center-gap-12" >
+          <nav className="bb-nav">
+            {navItems.map(item=>(
+              <button key={item.key} onClick={()=>setActiveTab(item.key as typeof activeTab)} className={`bb-nav-btn${activeTab===item.key?' bb-nav-active':''}`}>
+                {activeTab===item.key && <span className="bb-active-bar" />}
+                <span className="bb-mat-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="bb-sidebar-bottom">
             {newBookingNotifications.length > 0 && (
-              <div
-                className="admin-bell-badge bell-icon-wrapper"
-                onClick={() => { setActiveTab('oversikt'); setNewBookingNotifications([]); }}
-                title={`${newBookingNotifications.length} nya bokningar! Klicka för att rensa.`}
-              >
-                🔔
-                <span className="bell-red-dot"></span>
-              </div>
+              <button className="bb-bell-btn" onClick={()=>{setActiveTab('oversikt');setNewBookingNotifications([]);}}>
+                🔔 <span className="bb-bell-count">{newBookingNotifications.length}</span> ny bokning
+              </button>
             )}
             {shopSlug && (
-              <a
-                href={`/${shopSlug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary nav-btn" 
-              >
-                🌐 Visa bokningssida
+              <a href={`/${shopSlug}`} target="_blank" rel="noopener noreferrer" className="bb-view-btn">
+                <span className="bb-mat-icon" style={{fontSize:18}}>public</span> Visa bokningssida
               </a>
             )}
-            <div className="admin-shop-badge">🔗 Salong-ID: {shopId.substring(0, 8)}...</div>
           </div>
-        </header>
+        </aside>
 
-        <div className="admin-content-area position-relative" >
-          {error && <div className="error-alert">⚠️ {error}</div>}
-          {loading && <div className="loading-indicator">⏳ Laddar data från databasen...</div>}
-
-          {/* Subscription Status Banners */}
-          {!loading && subscription && (
-            <div className="subscription-status-banner">
-              {subscription.status === 'trial' && (() => {
-                const diff = new Date(subscription.trialEndsAt).getTime() - Date.now();
-                const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-                if (days > 0) {
-                  return (
-                    <div className="alert-banner info-alert">
-                      <span className="flex-center-gap-8" >
-                        <span>ℹ️</span>
-                        <span>Du har <strong>{days}</strong> {days === 1 ? 'dag' : 'dagar'} kvar av din gratis provperiod.</span>
-                      </span>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div className="alert-banner danger-alert">
-                      <span className="flex-center-gap-8" >
-                        <span>⚠️</span>
-                        <span>Din provperiod har gått ut. Välj en plan för att aktivera bokningar.</span>
-                      </span>
-                    </div>
-                  );
-                }
-              })()}
-              {subscription.status === 'suspended' && (
-                <div className="alert-banner danger-alert">
-                  <span className="flex-center-gap-8" >
-                    <span>⚠️</span>
-                    <span>Din salong är pausad. Uppdatera betalningen för att aktivera bokningar igen.</span>
-                  </span>
+        {/* ── Main ── */}
+        <div className="bb-main-wrap">
+          <main className="bb-main">
+            {/* Page header */}
+            <div className="bb-page-head">
+              <div>
+                <h1 className="bb-page-title">
+                  {activeTab==='oversikt'?'Översikt':activeTab==='kalender'?'Bokningar':activeTab==='tjanster'?'Tjänster':activeTab==='personal'?'Personal':activeTab==='kunder'?'Kunder':'Inställningar'}
+                </h1>
+                <p className="bb-page-sub">
+                  {activeTab==='oversikt'&&`Välkommen tillbaka till ${shopName}.`}
+                  {activeTab==='kalender'&&'Hantera ditt fullständiga bokningsschema.'}
+                  {activeTab==='tjanster'&&'Hantera dina tjänster och priser.'}
+                  {activeTab==='personal'&&`Hantera dina frisörer och deras tjänster för ${shopName}.`}
+                  {activeTab==='kunder'&&'Hantera och överskådliggör din lojala kundbas.'}
+                  {activeTab==='installningar'&&'Konfigurera salongens globala inställningar. Ändringar sparas direkt.'}
+                </p>
+              </div>
+              {activeTab==='oversikt' && (
+                <div className="bb-date-chip">
+                  <span className="bb-mat-icon" style={{color:'#775a19',fontSize:20}}>event</span>
+                  <span>{today}</span>
                 </div>
               )}
-              {subscription.status === 'cancelled' && (
-                <div className="alert-banner danger-alert">
-                  <span className="flex-center-gap-8" >
-                    <span>⚠️</span>
-                    <span>Salongens abonnemang är uppsagt. Välj en plan för att starta om.</span>
-                  </span>
-                </div>
-              )}
-              {subscription.status === 'past_due' && (
-                <div className="alert-banner warning-alert">
-                  <span className="flex-center-gap-8" >
-                    <span>⚠️</span>
-                    <span>Betalningen misslyckades. Uppdatera betalningsmetod inom 7 dagar.</span>
-                  </span>
-                </div>
+              {activeTab==='tjanster' && (
+                <span className="bb-live-badge" style={{alignSelf:'flex-end'}}>Live Nu</span>
               )}
             </div>
-          )}
 
-          {/* OVERVIEW */}
-          {activeTab === 'oversikt' && !loading && (
-            <div className="tab-pane">
-              <div className="kpi-grid">
-                <div className="kpi-card card-premium"><h4>Dagens bokningar</h4><div className="kpi-val">{stats.todayBookings}</div></div>
-                <div className="kpi-card card-premium"><h4>Intäkter denna månad</h4><div className="kpi-val">{stats.monthRevenue.toLocaleString('sv-SE')} kr</div></div>
-                <div className="kpi-card card-premium"><h4>Registrerade kunder</h4><div className="kpi-val">{stats.totalCustomers}</div></div>
-                <div className="kpi-card card-premium"><h4>Aktiva frisörer</h4><div className="kpi-val">{stats.activeBarbers}</div></div>
-              </div>
+            {/* Banners */}
+            {subscription?.status==='trial' && new Date(subscription.trialEndsAt)>=new Date() && (()=>{
+              const days = Math.max(0,Math.ceil((new Date(subscription.trialEndsAt).getTime()-Date.now())/86400000));
+              return <div className="bb-trial-banner">ℹ️ Du har <strong>{days}</strong> {days===1?'dag':'dagar'} kvar av din gratis provperiod.</div>;
+            })()}
+            {subscription?.status==='past_due' && <div className="bb-warn-banner">⚠️ Betalningen misslyckades. Uppdatera din betalningsmetod.</div>}
+            {error && <div className="bb-error-banner">⚠️ {error}</div>}
 
-              <div className="card-premium mt-32" >
-                <h3 className="mb-16" >Senaste bokningar</h3>
-                {bookings.length === 0 ? (
-                  <div className="empty-state">📭 Inga bokningar hittades ännu. När kunder bokar tider visas de här.</div>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="admin-table">
-                      <thead><tr><th>Kund</th><th>Tjänst</th><th>Frisör</th><th>Tid</th><th>Pris</th><th>Status</th><th>Åtgärd</th></tr></thead>
-                      <tbody>
-                        {bookings.slice(0, 10).map(b => (
-                          <tr key={b._id}>
-                            <td><strong>{b.customerName}</strong></td>
-                            <td>{b.serviceName}</td>
-                            <td>{b.barberName}</td>
-                            <td>Kl. {formatTime(b.startTime)}</td>
-                            <td>{b.totalPrice} kr</td>
-                            <td><span className={`status-badge ${b.status}`}>{statusLabel(b.status)}</span></td>
-                            <td>
-                              <div className="table-action-btns">
-                                {b.status === 'confirmed' && <button onClick={() => handleUpdateStatus(b._id, 'completed')} className="btn btn-primary btn-sm" >Slutförd</button>}
-                                {(b.status === 'confirmed' || b.status === 'paid') && <button onClick={() => handleUpdateStatus(b._id, 'no_show')} className="btn btn-secondary btn-sm text-danger" >Utebliven</button>}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            {loading && <div className="bb-loading"><div className="bb-spinner" /></div>}
+
+            {/* ── ÖVERSIKT ── */}
+            {activeTab==='oversikt' && !loading && (
+              <div className="bb-tab">
+                <div className="bb-kpi-grid">
+                  {[
+                    { label:'DAGENS BOKNINGAR', value:stats.todayBookings, unit:`Bokning${stats.todayBookings!==1?'ar':''}`, bar:Math.min(100,stats.todayBookings*10) },
+                    { label:'INTÄKTER DENNA MÅNAD', value:stats.monthRevenue.toLocaleString('sv-SE'), unit:'kr', bar:0 },
+                    { label:'REGISTRERADE KUNDER', value:stats.totalCustomers, unit:`Person${stats.totalCustomers!==1?'er':''}`, bar:Math.min(100,stats.totalCustomers*20) },
+                    { label:'AKTIVA FRISÖRER', value:stats.activeBarbers, unit:'Personal', bar:null },
+                  ].map((k,i)=>(
+                    <div key={i} className="bb-kpi">
+                      <div className="bb-dot-grid" style={{position:'absolute',top:8,right:8,width:60,height:60}} />
+                      <p className="bb-kpi-label">{k.label}</p>
+                      <div className="bb-kpi-val-row">
+                        <span className="bb-kpi-num">{k.value}</span>
+                        <span className="bb-kpi-unit">{k.unit}</span>
+                      </div>
+                      {k.bar !== null ? (
+                        <div className="bb-kpi-bar"><div className="bb-kpi-fill" style={{width:`${k.bar}%`}} /></div>
+                      ) : (
+                        <div className="bb-online"><span className="bb-online-dot" />Online nu</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bb-card">
+                  <div className="bb-card-head">
+                    <h3 className="bb-card-title">Senaste bokningar</h3>
+                    <button className="bb-link-btn" onClick={()=>setActiveTab('kalender')}>
+                      Visa alla <span className="bb-mat-icon" style={{fontSize:16,verticalAlign:'middle'}}>arrow_forward</span>
+                    </button>
                   </div>
+                  {bookings.length===0 ? (
+                    <div className="bb-empty">📭 Inga bokningar hittades ännu.</div>
+                  ) : (
+                    <div className="bb-table-wrap">
+                      <table className="bb-table">
+                        <thead><tr><th>KUND</th><th>TJÄNST</th><th>FRISÖR</th><th>TID</th><th style={{textAlign:'right'}}>PRIS</th><th style={{textAlign:'center'}}>STATUS</th><th>ÅTGÄRD</th></tr></thead>
+                        <tbody>
+                          {bookings.slice(0,10).map(b=>(
+                            <tr key={b._id}>
+                              <td><strong style={{whiteSpace:'nowrap'}}>{b.customerName}</strong></td>
+                              <td className="bb-td-gold" style={{whiteSpace:'nowrap'}}>{b.serviceName}</td>
+                              <td style={{whiteSpace:'nowrap'}}>{b.barberName}</td>
+                              <td style={{whiteSpace:'nowrap'}}>Kl. {formatTime(b.startTime)}</td>
+                              <td style={{textAlign:'right',fontWeight:600}}>{b.totalPrice} kr</td>
+                              <td style={{textAlign:'center'}}><span className={`bb-badge ${badgeClass(b.status)}`}>{statusLabel(b.status)}</span></td>
+                              <td>
+                                <div style={{display:'flex',gap:6}}>
+                                  {b.status==='confirmed' && <button onClick={()=>handleUpdateStatus(b._id,'completed')} className="bb-act-gold">Slutförd</button>}
+                                  {(b.status==='confirmed'||b.status==='paid') && <button onClick={()=>handleUpdateStatus(b._id,'no_show')} className="bb-act-dark">Utebliven</button>}
+                                  {(b.status==='completed'||b.status==='no_show') && <span style={{fontSize:12,color:'#7f7667',fontStyle:'italic'}}>Hanterad</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── BOKNINGAR ── */}
+            {activeTab==='kalender' && !loading && (
+              <div className="bb-card">
+                <div className="bb-card-head">
+                  <h3 className="bb-card-title">Alla bokningar <span className="bb-count-label">({bookings.length} totalt)</span></h3>
+                </div>
+                {bookings.length===0 ? (
+                  <div className="bb-empty">📭 Inga bokningar registrerade ännu.</div>
+                ) : (
+                  <>
+                    <div className="bb-table-wrap">
+                      <table className="bb-table">
+                        <thead><tr><th>DATUM</th><th>TID</th><th>KUND</th><th>TJÄNST</th><th>FRISÖR</th><th style={{textAlign:'right'}}>PRIS</th><th style={{textAlign:'center'}}>STATUS</th></tr></thead>
+                        <tbody>
+                          {bookings.map(b=>(
+                            <tr key={b._id}>
+                              <td style={{whiteSpace:'nowrap'}}>{new Date(b.startTime).toLocaleDateString('sv-SE')}</td>
+                              <td style={{whiteSpace:'nowrap'}}>{formatTime(b.startTime)}–{formatTime(b.endTime)}</td>
+                              <td><strong style={{whiteSpace:'nowrap'}}>{b.customerName}</strong></td>
+                              <td className="bb-td-gold" style={{whiteSpace:'nowrap'}}>{b.serviceName}</td>
+                              <td style={{whiteSpace:'nowrap'}}>{b.barberName}</td>
+                              <td style={{textAlign:'right',fontWeight:600}}>{b.totalPrice} kr</td>
+                              <td style={{textAlign:'center'}}><span className={`bb-badge ${badgeClass(b.status)}`}>{statusLabel(b.status)}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="bb-table-foot">
+                      <span>Visar {bookings.length} av {bookings.length} bokningar</span>
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* BOOKINGS LIST */}
-          {activeTab === 'kalender' && !loading && (
-            <div className="tab-pane card-premium">
-              <h3 className="mb-24" >Alla bokningar ({bookings.length} totalt)</h3>
-              {bookings.length === 0 ? (
-                <div className="empty-state">📭 Inga bokningar registrerade ännu.</div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead><tr><th>Datum</th><th>Tid</th><th>Kund</th><th>Tjänst</th><th>Frisör</th><th>Pris</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {bookings.map(b => (
-                        <tr key={b._id}>
-                          <td>{new Date(b.startTime).toLocaleDateString('sv-SE')}</td>
-                          <td>{formatTime(b.startTime)} - {formatTime(b.endTime)}</td>
-                          <td><strong>{b.customerName}</strong></td>
-                          <td>{b.serviceName}</td>
-                          <td>{b.barberName}</td>
-                          <td>{b.totalPrice} kr</td>
-                          <td><span className={`status-badge ${b.status}`}>{statusLabel(b.status)}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* SERVICES */}
-          {activeTab === 'tjanster' && !loading && (
-            <div className="tab-pane">
-              <div className="two-col-layout">
-                <div className="card-premium">
-                  <h3>Aktiva tjänster ({services.length})</h3>
-                  {services.length === 0 ? (
-                    <div className="empty-state mt-16" >Inga tjänster skapade ännu. Lägg till din första tjänst till höger →</div>
+            {/* ── TJÄNSTER ── */}
+            {activeTab==='tjanster' && !loading && (
+              <div className="bb-two-col">
+                <div className="bb-card">
+                  <div className="bb-card-head" style={{marginBottom:20}}>
+                    <h3 className="bb-card-title">Aktiva tjänster ({services.filter(s=>s.isActive).length})</h3>
+                  </div>
+                  {services.length===0 ? (
+                    <div className="bb-empty">Inga tjänster skapade ännu. Lägg till din första tjänst →</div>
                   ) : (
-                    <div className="mt-20 flex-col-gap-12" >
-                      {services.map(s => (
-                        <div key={s._id} className={`service-item-box ${s.isActive ? '' : 'opacity-50'}`}>
-                          <div>
-                            <strong>{s.name}</strong>
-                            {s.description && <p className="text-sm-secondary" >{s.description}</p>}
-                            <p className="text-sm-muted" >⏳ {s.durationMinutes} min | 💵 {s.price} kr</p>
+                    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                      {services.map(s=>(
+                        <div key={s._id} className={`bb-svc-card${!s.isActive?' bb-dim':''}`}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <h4 className="bb-svc-name">{s.name}</h4>
+                            {s.description && <p className="bb-svc-desc">{s.description}</p>}
+                            <div className="bb-svc-meta">
+                              <span className="bb-svc-meta-item">
+                                <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>schedule</span>
+                                {s.durationMinutes} min
+                              </span>
+                              <span className="bb-svc-meta-item">
+                                <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>payments</span>
+                                {s.price} kr
+                              </span>
+                            </div>
                           </div>
-                          <button onClick={() => handleToggleService(s._id)} className={`btn ${s.isActive ? 'btn-secondary' : 'btn-primary'} btn-md`} >
-                            {s.isActive ? 'Inaktivera' : 'Aktivera'}
+                          <button onClick={()=>handleToggleService(s._id)} className={s.isActive?'bb-btn-outline':'bb-btn-gold-sm'}>
+                            {s.isActive?'Inaktivera':'Aktivera'}
                           </button>
                         </div>
                       ))}
@@ -590,508 +610,269 @@ export default function ShopAdminDashboard() {
                   )}
                 </div>
 
-                <div className="card-premium">
-                  <h3>Lägg till ny tjänst</h3>
-                  <form onSubmit={handleAddService} className="admin-form-container">
-                    <div className="form-group">
-                      <label htmlFor="serviceName" className="form-label">Namn</label>
-                      <input
-                        id="serviceName"
-                        type="text"
-                        required
-                        value={newServiceName}
-                        onChange={e => setNewServiceName(e.target.value)}
-                        className="form-input"
-                        placeholder="t.ex. Maskinklippning"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="serviceDesc" className="form-label">Beskrivning</label>
-                      <input
-                        id="serviceDesc"
-                        type="text"
-                        value={newServiceDesc}
-                        onChange={e => setNewServiceDesc(e.target.value)}
-                        className="form-input"
-                        placeholder="Valfri beskrivning"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="serviceDuration" className="form-label">Tid (min)</label>
-                      <input
-                        id="serviceDuration"
-                        type="number"
-                        required
-                        value={newServiceDuration}
-                        onChange={e => { const val = e.target.value; setNewServiceDuration(val === '' ? '' : Number(val)); }}
-                        className="form-input"
-                        placeholder="30"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="servicePrice" className="form-label">Pris (kr)</label>
-                      <input
-                        id="servicePrice"
-                        type="number"
-                        required
-                        value={newServicePrice}
-                        onChange={e => { const val = e.target.value; setNewServicePrice(val === '' ? '' : Number(val)); }}
-                        className="form-input"
-                        placeholder="400"
-                      />
-                    </div>
-                    <button type="submit" disabled={savingService} className="btn btn-primary w-full">
-                      {savingService ? 'Sparar...' : 'Spara tjänst'}
-                    </button>
-                  </form>
+                <div style={{position:'relative'}}>
+                  <div className="bb-card bb-form-sticky">
+                    <h3 className="bb-card-title" style={{marginBottom:24}}>Lägg till ny tjänst</h3>
+                    <form onSubmit={handleAddService} className="bb-form">
+                      <div className="bb-fg"><label className="bb-fg-label">Namn</label><input type="text" required value={newServiceName} onChange={e=>setNewServiceName(e.target.value)} placeholder="t.ex. Maskinklippning" /></div>
+                      <div className="bb-fg"><label className="bb-fg-label">Beskrivning</label><textarea value={newServiceDesc} onChange={e=>setNewServiceDesc(e.target.value)} placeholder="Valfri beskrivning" rows={3} /></div>
+                      <div className="bb-svc-grid">
+                        <div className="bb-fg"><label className="bb-fg-label">Tid (min)</label><input type="number" required value={newServiceDuration} onChange={e=>{const v=e.target.value;setNewServiceDuration(v===''?'':Number(v));}} /></div>
+                        <div className="bb-fg"><label className="bb-fg-label">Pris (kr)</label><input type="number" required value={newServicePrice} onChange={e=>{const v=e.target.value;setNewServicePrice(v===''?'':Number(v));}} /></div>
+                      </div>
+                      <div style={{paddingTop:4}}>
+                        <button type="submit" disabled={savingService} className="bb-btn-primary-full">
+                          {savingService?'Sparar...':'Spara tjänst'}
+                        </button>
+                      </div>
+                    </form>
+                    <div className="bb-dot-grid" style={{position:'absolute',bottom:12,right:12,width:40,height:40,opacity:0.2}} />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* STAFF */}
-          {activeTab === 'personal' && !loading && (
-            <div className="tab-pane">
-              <div className="two-col-layout">
-                <div className="card-premium">
-                  <h3>Frisörer & Personal ({barbers.length})</h3>
-                  {barbers.length === 0 ? (
-                    <div className="empty-state mt-16" >Inga frisörer registrerade ännu. Lägg till din första frisör till höger →</div>
-                  ) : (
-                    <div className="grid-responsive staff-grid" >
-                      {barbers.map(b => (
-                        <div key={b._id} className="card-premium text-center staff-card" >
-                          <div className="text-3xl-mb-12" >💈</div>
-                          <h4>{b.name}</h4>
-                          <p className="text-sm-muted mb-12">{b.email}</p>
-                          {b.bio && <p className="text-sm-secondary mb-12" >{b.bio}</p>}
-                          <div className="flex-wrap-center-gap-6" >
-                            {b.services.map(s => (
-                              <span key={s} className="service-pill" >{s}</span>
+            {/* ── PERSONAL ── */}
+            {activeTab==='personal' && !loading && (
+              <div className="bb-personal-col">
+                {/* Left: staff grid */}
+                <div>
+                  <div className="bb-staff-grid">
+                    {barbers.map(b=>{
+                      const initials = getInitials(b.name);
+                      return (
+                        <div key={b._id} className="bb-staff-card">
+                          <div className="bb-staff-avatar">{initials}</div>
+                          <h3 className="bb-staff-name">{b.name}</h3>
+                          <p className="bb-staff-role">Frisör</p>
+                          <div className="bb-staff-email">
+                            <span className="bb-mat-icon" style={{fontSize:15,color:'#775a19'}}>mail</span>
+                            {b.email}
+                          </div>
+                          {b.bio && <p className="bb-staff-bio">"{b.bio}"</p>}
+                          {b.services.length > 0 && (
+                            <div className="bb-staff-tags">
+                              {b.services.slice(0,4).map(s=><span key={s} className="bb-staff-tag">{s}</span>)}
+                            </div>
+                          )}
+                          <div className="bb-staff-footer">
+                            {b.isActive ? (
+                              <span className="bb-staff-status-active">
+                                <span className="bb-staff-dot-active" /> Tillgänglig
+                              </span>
+                            ) : (
+                              <span className="bb-staff-status-inactive">
+                                <span className="bb-staff-dot-inactive" /> Inaktiv
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right: add form (sticky) */}
+                <div>
+                  <div className="bb-card bb-form-sticky">
+                    <div style={{position:'absolute',top:0,left:24,width:40,height:3,background:'#775a19',borderRadius:2}} />
+                    <h3 className="bb-card-title" style={{marginBottom:24}}>Lägg till ny frisör</h3>
+                    <form onSubmit={handleAddBarber} className="bb-form">
+                      <div className="bb-svc-grid">
+                        <div className="bb-fg"><label className="bb-fg-label">Förnamn</label><input id="barber-form-name" type="text" required value={newBarberFirstName} onChange={e=>setNewBarberFirstName(e.target.value)} placeholder="Johan" /></div>
+                        <div className="bb-fg"><label className="bb-fg-label">Efternamn</label><input type="text" required value={newBarberLastName} onChange={e=>setNewBarberLastName(e.target.value)} placeholder="Andersson" /></div>
+                      </div>
+                      <div className="bb-fg"><label className="bb-fg-label">E-postadress</label><input type="email" required value={newBarberEmail} onChange={e=>setNewBarberEmail(e.target.value)} placeholder="johan@salong.se" /></div>
+                      <div className="bb-fg"><label className="bb-fg-label">Lösenord</label><input type="password" required value={newBarberPassword} onChange={e=>setNewBarberPassword(e.target.value)} placeholder="Minst 6 tecken" /></div>
+                      <div className="bb-fg"><label className="bb-fg-label">Bio (kort beskrivning)</label><textarea value={newBarberBio} onChange={e=>setNewBarberBio(e.target.value)} placeholder="Beskriv frisörens expertis..." rows={3} /></div>
+                      {services.length > 0 && (
+                        <div className="bb-fg">
+                          <label className="bb-fg-label">Tjänster som utförs</label>
+                          <div className="bb-chk-grid">
+                            {services.map(s=>(
+                              <label key={s._id} className="bb-chk-grid-item">
+                                <input type="checkbox" checked={selectedServices.includes(s._id)} onChange={e=>{
+                                  if(e.target.checked) setSelectedServices([...selectedServices,s._id]);
+                                  else setSelectedServices(selectedServices.filter(id=>id!==s._id));
+                                }} />
+                                <span style={{fontSize:13}}>{s.name}</span>
+                              </label>
                             ))}
                           </div>
-                          <span className={`status-badge ${b.isActive ? 'confirmed' : 'cancelled_by_shop'} mt-12 inline-block`} >
-                            {b.isActive ? 'Aktiv' : 'Inaktiv'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="card-premium">
-                  <h3>Lägg till ny frisör / personal</h3>
-                  <form onSubmit={handleAddBarber} className="mt-20 flex-col-gap-12" >
-                    <div className="form-group"><label className="form-label">Förnamn</label><input type="text" required value={newBarberFirstName} onChange={e => setNewBarberFirstName(e.target.value)} className="form-input" placeholder="t.ex. Johan" /></div>
-                    <div className="form-group"><label className="form-label">Efternamn</label><input type="text" required value={newBarberLastName} onChange={e => setNewBarberLastName(e.target.value)} className="form-input" placeholder="t.ex. Andersson" /></div>
-                    <div className="form-group"><label className="form-label">E-postadress</label><input type="email" required value={newBarberEmail} onChange={e => setNewBarberEmail(e.target.value)} className="form-input" placeholder="johan@salong.se" /></div>
-                    <div className="form-group"><label className="form-label">Lösenord</label><input type="password" required value={newBarberPassword} onChange={e => setNewBarberPassword(e.target.value)} className="form-input" placeholder="Minst 6 tecken" /></div>
-                    <div className="form-group"><label className="form-label">Bio (kort beskrivning)</label><textarea value={newBarberBio} onChange={e => setNewBarberBio(e.target.value)} className="form-input textarea-input" placeholder="Erfaren frisör specialiserad på herrklippning..."  /></div>
-                    
-                    <div className="form-group">
-                      <label className="form-label">Tjänster som utförs</label>
-                      {services.length === 0 ? (
-                        <p className="text-sm-muted" >Skapa först tjänster under fliken "Tjänster" för att kunna välja dem här.</p>
-                      ) : (
-                        <div className="services-scroll-list" >
-                          {services.map(s => (
-                            <label key={s._id} className="checkbox-label-row" >
-                              <input
-                                type="checkbox"
-                                checked={selectedServices.includes(s._id)}
-                                onChange={e => {
-                                  if (e.target.checked) {
-                                    setSelectedServices([...selectedServices, s._id]);
-                                  } else {
-                                    setSelectedServices(selectedServices.filter(id => id !== s._id));
-                                  }
-                                }}
-                              />
-                              {s.name} ({s.price} kr)
-                            </label>
-                          ))}
                         </div>
                       )}
-                    </div>
-
-                    <button type="submit" disabled={savingBarber} className="btn btn-primary w-full" >{savingBarber ? 'Sparar...' : 'Spara personal'}</button>
-                  </form>
+                      <button type="submit" disabled={savingBarber} className="bb-btn-primary-full">
+                        {savingBarber?'Sparar...':'SPARA NY PERSONAL'}
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* CUSTOMERS */}
-          {activeTab === 'kunder' && !loading && (
-            <div className="tab-pane card-premium">
-              <h3 className="mb-16" >Kundregister ({customers.length} kunder)</h3>
-              {customers.length === 0 ? (
-                <div className="empty-state">📭 Inga kunder registrerade ännu. De skapas automatiskt vid bokning.</div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="admin-table">
-                    <thead><tr><th>Namn</th><th>E-post</th><th>Telefon</th><th>Antal bokningar</th></tr></thead>
-                    <tbody>
-                      {customers.map(c => (
-                        <tr key={c._id}>
-                          <td><strong>{c.firstName} {c.lastName}</strong></td>
-                          <td>{c.email}</td>
-                          <td>{c.phoneNumber}</td>
-                          <td><span className="booking-badge">{c.bookingCount}</span></td>
-                        </tr>
+            {/* ── KUNDER ── */}
+            {activeTab==='kunder' && !loading && (
+              <div className="bb-card">
+                <div className="bb-card-head">
+                  <h3 className="bb-card-title">Kundregister <span className="bb-count-label">({customers.length} kunder)</span></h3>
+                </div>
+                {customers.length===0 ? (
+                  <div className="bb-empty">📭 Inga kunder registrerade ännu. Kunder skapas automatiskt vid bokning.</div>
+                ) : (
+                  <>
+                    <div className="bb-table-wrap">
+                      <table className="bb-table">
+                        <thead>
+                          <tr><th>NAMN</th><th>E-POST</th><th>TELEFON</th><th style={{textAlign:'center'}}>BOKNINGAR</th></tr>
+                        </thead>
+                        <tbody>
+                          {customers.map(c=>(
+                            <tr key={c._id} className="bb-customer-row">
+                              <td>
+                                <div style={{display:'flex',alignItems:'center',gap:12,whiteSpace:'nowrap'}}>
+                                  <span className="bb-avatar">{getInitials(`${c.firstName} ${c.lastName}`)}</span>
+                                  <strong style={{color:'#1b1c1c',whiteSpace:'nowrap'}}>{c.firstName} {c.lastName}</strong>
+                                </div>
+                              </td>
+                              <td style={{color:'#4e4639'}}>{c.email}</td>
+                              <td style={{color:'#4e4639'}}>{c.phoneNumber}</td>
+                              <td style={{textAlign:'center'}}>
+                                <span className="bb-count-chip">{c.bookingCount}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="bb-table-foot">
+                      <span>Visar {customers.length} av {customers.length} kunder</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── INSTÄLLNINGAR ── */}
+            {activeTab==='installningar' && !loading && (
+              <div className="bb-card bb-settings-card">
+                <form onSubmit={e=>{e.preventDefault();handleSaveSettings();}}>
+
+                  {/* Section 1: General */}
+                  <div className="bb-settings-section">
+                    <h3 className="bb-settings-section-title">
+                      <span className="bb-mat-icon" style={{fontSize:22}}>store</span>
+                      Salongens inställningar
+                    </h3>
+                    <div className="bb-settings-two-col">
+                      <div className="bb-fg">
+                        <label className="bb-fg-label">Avbokningsfönster (timmar innan)</label>
+                        <div style={{position:'relative'}}>
+                          <input type="number" value={cancellationHours} onChange={e=>{const v=e.target.value;setCancellationHours(v===''?'':Number(v));}} placeholder="24" style={{paddingRight:36}} />
+                          <span style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',fontSize:12,color:'#7f7667',fontWeight:600,pointerEvents:'none'}}>h</span>
+                        </div>
+                        <span className="bb-settings-hint">Kunder kan inte avboka online senare än detta.</span>
+                      </div>
+                      <div className="bb-fg">
+                        <label className="bb-fg-label">Deposition vid onlinebokning (%)</label>
+                        <div style={{position:'relative'}}>
+                          <input type="number" value={depositPct} onChange={e=>{const v=e.target.value;setDepositPct(v===''?'':Number(v));}} placeholder="0" style={{paddingRight:36}} />
+                          <span style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',fontSize:12,color:'#7f7667',fontWeight:600,pointerEvents:'none'}}>%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bb-settings-divider" />
+
+                  {/* Section 2: Payments */}
+                  <div className="bb-settings-section">
+                    <h3 className="bb-settings-section-title">
+                      <span className="bb-mat-icon" style={{fontSize:22}}>payments</span>
+                      Godkända betalningsmetoder
+                    </h3>
+                    <div className="bb-pay-methods-wrap">
+                      {([
+                        { key:'swish', label:'Swish' },
+                        { key:'card', label:'Kort i salongen (Kortterminal)' },
+                        { key:'cash', label:'Kontant' },
+                      ] as const).map(m=>(
+                        <label key={m.key} className="bb-pay-method">
+                          <input type="checkbox" checked={acceptedPaymentMethods.includes(m.key)} onChange={e=>{
+                            if(e.target.checked) setAcceptedPaymentMethods([...acceptedPaymentMethods,m.key]);
+                            else setAcceptedPaymentMethods(acceptedPaymentMethods.filter(x=>x!==m.key));
+                          }} />
+                          {m.key==='swish' && (
+                            <img src="/swish.svg" width={34} height={34} alt="Swish" style={{flexShrink:0}} />
+                          )}
+                          {m.key==='card' && (
+                            <svg viewBox="0 0 86 54" width="44" height="28" style={{flexShrink:0}}>
+                              <defs>
+                                <linearGradient id="card-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#1565C0"/>
+                                  <stop offset="100%" stopColor="#0D47A1"/>
+                                </linearGradient>
+                              </defs>
+                              <rect width="86" height="54" rx="6" fill="url(#card-bg)"/>
+                              {/* magnetic stripe */}
+                              <rect x="0" y="13" width="86" height="10" fill="rgba(0,0,0,0.35)"/>
+                              {/* chip */}
+                              <rect x="8" y="28" width="18" height="14" rx="2" fill="#E8B84B"/>
+                              <line x1="8" y1="35" x2="26" y2="35" stroke="rgba(0,0,0,0.25)" strokeWidth="1"/>
+                              <line x1="17" y1="28" x2="17" y2="42" stroke="rgba(0,0,0,0.25)" strokeWidth="1"/>
+                              {/* VISA text */}
+                              <text x="78" y="48" fill="white" fontSize="13" fontWeight="900" fontStyle="italic" textAnchor="end" fontFamily="'Times New Roman',Georgia,serif" letterSpacing="1">VISA</text>
+                            </svg>
+                          )}
+                          {m.key==='cash' && (
+                            <svg viewBox="0 0 86 54" width="44" height="28" style={{flexShrink:0}}>
+                              <rect width="86" height="54" rx="6" fill="#2E7D32"/>
+                              <rect x="2" y="2" width="82" height="50" rx="5" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+                              <circle cx="12" cy="12" r="7" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+                              <circle cx="74" cy="42" r="7" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+                              <ellipse cx="43" cy="27" rx="16" ry="14" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
+                              <text x="43" y="32" fill="white" fontSize="14" fontWeight="800" textAnchor="middle" fontFamily="Arial,sans-serif">kr</text>
+                            </svg>
+                          )}
+                          <span className="bb-pay-method-label">{m.label}</span>
+                        </label>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                    <p className="bb-settings-hint" style={{marginTop:8}}>Välj de betalningssätt som visas för kunder på bokningsbekräftelsen.</p>
+                  </div>
 
-          {/* SETTINGS */}
-          {activeTab === 'installningar' && !loading && (
-            <div className="tab-pane card-premium">
-              <h3>Salongens inställningar</h3>
-              <p className="settings-intro">Dessa inställningar sparas direkt i databasen och påverkar bokningssidan.</p>
-              <form onSubmit={e => { e.preventDefault(); handleSaveSettings(); }} className="settings-form">
-                <div className="form-group">
-                  <label htmlFor="cancellationHours" className="form-label">Avbokningsfönster (timmar innan)</label>
-                  <input
-                    id="cancellationHours"
-                    type="number"
-                    value={cancellationHours}
-                    onChange={e => { const val = e.target.value; setCancellationHours(val === '' ? '' : Number(val)); }}
-                    className="form-input"
-                    placeholder="24"
-                  />
-                  <p className="form-help-text">Kunder kan inte avboka online senare än detta.</p>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="depositPct" className="form-label">Deposition vid onlinebokning (%)</label>
-                  <input
-                    id="depositPct"
-                    type="number"
-                    value={depositPct}
-                    onChange={e => { const val = e.target.value; setDepositPct(val === '' ? '' : Number(val)); }}
-                    className="form-input"
-                    placeholder="0"
-                  />
-                </div>
-                 <div className="form-group">
-                  <label className="form-label">Godkända betalningsmetoder i salongen (Betala på plats)</label>
-                  <div className="checkbox-group-container">
-                    <label className="checkbox-row-label">
-                      <input
-                        type="checkbox"
-                        checked={acceptedPaymentMethods.includes('swish')}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'swish']);
-                          } else {
-                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'swish'));
-                          }
-                        }}
-                      />
-                      📱 Swish
-                    </label>
-                    <label className="checkbox-row-label">
-                      <input
-                        type="checkbox"
-                        checked={acceptedPaymentMethods.includes('card')}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'card']);
-                          } else {
-                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'card'));
-                          }
-                        }}
-                      />
-                      💳 Kort i salongen (Kortterminal)
-                    </label>
-                    <label className="checkbox-row-label">
-                      <input
-                        type="checkbox"
-                        checked={acceptedPaymentMethods.includes('cash')}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setAcceptedPaymentMethods([...acceptedPaymentMethods, 'cash']);
-                          } else {
-                            setAcceptedPaymentMethods(acceptedPaymentMethods.filter(m => m !== 'cash'));
-                          }
-                        }}
-                      />
-                      💵 Kontant
-                    </label>
+                  <div className="bb-settings-divider" />
+
+                  {/* Section 3: Hours */}
+                  <div className="bb-settings-section">
+                    <h3 className="bb-settings-section-title">
+                      <span className="bb-mat-icon" style={{fontSize:22}}>schedule</span>
+                      Öppettider (Mån–Fre)
+                    </h3>
+                    <div className="bb-time-row">
+                      <div className="bb-time-col">
+                        <label style={{fontSize:10,fontWeight:700,color:'#7f7667',textTransform:'uppercase',letterSpacing:'0.1em'}}>Från</label>
+                        <input type="time" value={openTime} onChange={e=>setOpenTime(e.target.value)} className="bb-fg" style={{padding:'11px 14px',border:'1.5px solid #d1c5b4',borderRadius:10,fontSize:14,color:'#1b1c1c',outline:'none',width:130}} />
+                      </div>
+                      <span className="bb-time-sep">till</span>
+                      <div className="bb-time-col">
+                        <label style={{fontSize:10,fontWeight:700,color:'#7f7667',textTransform:'uppercase',letterSpacing:'0.1em'}}>Till</label>
+                        <input type="time" value={closeTime} onChange={e=>setCloseTime(e.target.value)} style={{padding:'11px 14px',border:'1.5px solid #d1c5b4',borderRadius:10,fontSize:14,color:'#1b1c1c',outline:'none',width:130}} />
+                      </div>
+                    </div>
                   </div>
-                  <p className="form-help-text">Välj de betalningssätt som visas för kunder på bokningsbekräftelsen.</p>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Öppettider (Mån-Fre)</label>
-                  <div className="opening-hours-row">
-                    <input
-                      id="openTime"
-                      type="text"
-                      aria-label="Öppningstid"
-                      value={openTime}
-                      onChange={e => setOpenTime(e.target.value)}
-                      className="form-input time-input"
-                      placeholder="09:00"
-                    />
-                    <span>till</span>
-                    <input
-                      id="closeTime"
-                      type="text"
-                      aria-label="Stängningstid"
-                      value={closeTime}
-                      onChange={e => setCloseTime(e.target.value)}
-                      className="form-input time-input"
-                      placeholder="18:00"
-                    />
-                  </div>
-                </div>
-                <button type="submit" disabled={savingSettings} className="btn btn-primary btn-fit-content">
-                  {savingSettings ? 'Sparar...' : 'Spara inställningar'}
-                </button>
-              </form>
-            </div>
-          )}
+
+                  <div className="bb-settings-divider" />
+
+                  <button type="submit" disabled={savingSettings} className="bb-btn-primary">
+                    {savingSettings?'Sparar...':<><span>Spara inställningar</span><span className="bb-mat-icon" style={{fontSize:18}}>check_circle</span></>}
+                  </button>
+                </form>
+              </div>
+            )}
+          </main>
+          {/* No bb-footer here — the public Footer component handles the dashboard footer */}
         </div>
       </div>
-
-      <style jsx>{`
-
-        .toast-border-success { border-left: 4px solid #10b981; }
-        .toast-border-error { border-left: 4px solid #ef4444; }
-        .toast-border-info { border-left: 4px solid #3b82f6; }
-        .flex-center-gap-8 { display: flex; align-items: center; gap: 8px; }
-        .text-1-2rem { font-size: 1.2rem; }
-        .text-slate-800 { color: #1e293b; }
-        .toast-desc { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-secondary); }
-        .flex-center-gap-12 { display: flex; gap: 12px; align-items: center; }
-        .bell-icon-wrapper { position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background-color: var(--bg-tertiary); font-size: 1.1rem; transition: all var(--transition-fast); }
-        .nav-btn { padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border: 1px solid var(--primary); color: white; font-weight: 600; text-decoration: none; }
-        .position-relative { position: relative; }
-        .mb-16 { margin-bottom: 16px; }
-        .mb-24 { margin-bottom: 24px; }
-        .mt-32 { margin-top: 32px; }
-        .mt-20 { margin-top: 20px; }
-        .mt-16 { margin-top: 16px; }
-        .mt-12 { margin-top: 12px; }
-        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
-        .text-danger { color: var(--color-danger) !important; }
-        .flex-col-gap-12 { display: flex; flex-direction: column; gap: 12px; }
-        .service-item-box { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s; }
-        .opacity-50 { opacity: 0.5; }
-        .text-sm-secondary { font-size: 0.85rem; color: var(--text-secondary); }
-        .text-sm-muted { font-size: 0.85rem; color: var(--text-muted); }
-        .btn-md { padding: 8px 16px; font-size: 0.85rem; }
-        .staff-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-        .staff-card { text-align: center; border: 1px solid var(--border-color); }
-        .text-3xl-mb-12 { font-size: 3rem; margin-bottom: 12px; }
-        .mb-12 { margin-bottom: 12px; }
-        .flex-wrap-center-gap-6 { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .service-pill { background-color: var(--bg-tertiary); padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; }
-        .inline-block { display: inline-block; }
-        .w-full { width: 100%; }
-        .services-scroll-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); }
-        .checkbox-label-row { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
-        .textarea-input { min-height: 80px; font-family: inherit; resize: vertical; }
-
-        .admin-dashboard-wrapper { display: flex; min-height: calc(100vh - 160px); }
-        .admin-sidebar { width: 260px; background-color: var(--secondary-hover); color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); flex-shrink: 0; min-height: calc(100vh - 160px); }
-        .sidebar-brand { padding: 24px; font-family: var(--font-primary); font-size: 1.3rem; font-weight: 800; color: #f8fafc; border-bottom: 1px solid #1e293b; }
-        .sidebar-brand span { color: var(--accent); }
-        .sidebar-nav { display: flex; flex-direction: column; padding: 16px 0; }
-        .sidebar-nav button { background: transparent; color: #94a3b8; padding: 14px 24px; text-align: left; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); font-size: 0.95rem; }
-        .sidebar-nav button:hover { color: #f8fafc; background-color: #1e293b; }
-        .sidebar-nav button.active { color: #f8fafc; background-color: var(--secondary); border-left: 4px solid var(--primary); }
-        .admin-main-panel { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-primary); min-width: 0; }
-        .admin-top-bar { background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
-        .admin-top-bar h2 { font-size: 1.5rem; }
-        .admin-shop-badge { background-color: var(--bg-tertiary); padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
-        .admin-content-area { padding: 32px; flex: 1; overflow-y: auto; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
-        .kpi-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: none; letter-spacing: 0.3px; margin-bottom: 8px; }
-        .kpi-val { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
-        .table-responsive { width: 100%; overflow-x: auto; }
-        .admin-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; min-width: 750px; }
-        .admin-table th { background-color: var(--bg-tertiary); padding: 12px 16px; font-weight: 700; color: var(--text-secondary); border-bottom: 2px solid var(--border-color); white-space: nowrap; }
-        .admin-table td { padding: 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-        .status-badge { padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; }
-        .status-badge.confirmed { background-color: #d1fae5; color: #065f46; }
-        .status-badge.paid { background-color: #dbeafe; color: #1e40af; }
-        .status-badge.completed { background-color: #d1fae5; color: #065f46; }
-        .status-badge.no_show, .status-badge.cancelled_by_shop, .status-badge.cancelled_by_customer { background-color: #fee2e2; color: #991b1b; }
-        .booking-badge { background-color: var(--primary-lightest); color: var(--primary); padding: 4px 10px; border-radius: var(--radius-full); font-weight: 700; font-size: 0.8rem; }
-        .table-action-btns { display: flex; gap: 8px; }
-        .error-alert { background-color: #fee2e2; color: var(--color-danger); padding: 12px; border-radius: var(--radius-sm); font-weight: 600; margin-bottom: 24px; }
-        .loading-indicator { text-align: center; padding: 48px; font-weight: 600; color: var(--text-secondary); font-size: 1.1rem; }
-        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 1rem; border: 1px dashed var(--border-color); border-radius: var(--radius-md); }
-        .two-col-layout { display: grid; grid-template-columns: 1fr; gap: 32px; }
-        @media (min-width: 992px) { .two-col-layout { grid-template-columns: 1.2fr 0.8fr; } }
-        @media (max-width: 768px) {
-          .admin-dashboard-wrapper { flex-direction: column; }
-          .admin-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); min-height: auto; }
-          .sidebar-brand { padding: 16px 20px; border-bottom: 1px solid var(--border-color); }
-          .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 4px 8px; gap: 2px; }
-          .sidebar-nav button { padding: 10px 16px; white-space: nowrap; font-size: 0.85rem; border-left: none !important; border-bottom: 3px solid transparent; }
-          .sidebar-nav button.active { border-bottom: 3px solid var(--primary); background-color: var(--secondary) !important; }
-          .admin-top-bar { padding: 16px 20px; flex-direction: column; gap: 12px; align-items: flex-start; }
-          .admin-top-bar h2 { font-size: 1.3rem; }
-          .admin-content-area { padding: 16px; }
-          .kpi-grid { gap: 12px; }
-          .kpi-card { padding: 16px !important; }
-          .kpi-val { font-size: 1.4rem !important; }
-        }
-        .alert-banner {
-          padding: 12px 16px;
-          border-radius: var(--radius-md);
-          font-weight: 500;
-          margin-bottom: 24px;
-          font-size: 0.88rem;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        .info-alert {
-          background-color: rgba(59, 130, 246, 0.08);
-          border: 1px solid rgba(59, 130, 246, 0.2);
-          color: #60a5fa;
-        }
-        .warning-alert {
-          background-color: rgba(245, 158, 11, 0.08);
-          border: 1px solid rgba(245, 158, 11, 0.2);
-          color: #fbbf24;
-        }
-        .danger-alert {
-          background-color: rgba(239, 68, 68, 0.08);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          color: #f87171;
-        }
-        .form-group {
-          margin-bottom: 0px !important;
-          gap: 6px !important;
-        }
-        .toast-notification-container {
-          position: fixed;
-          top: 24px;
-          right: 24px;
-          z-index: 1000;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          max-width: 360px;
-          width: 100%;
-        }
-        .toast-notification {
-          background-color: #ffffff;
-          border: 1px solid var(--accent);
-          border-left: 4px solid var(--accent);
-          border-radius: var(--radius-md);
-          padding: 16px;
-          box-shadow: var(--shadow-lg);
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-        }
-        .toast-content {
-          flex: 1;
-          text-align: left;
-        }
-        .toast-close {
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          font-size: 1.5rem;
-          line-height: 1;
-          cursor: pointer;
-          padding: 0;
-          margin-top: -4px;
-          transition: color var(--transition-fast);
-        }
-        .toast-close:hover {
-          color: var(--color-danger);
-        }
-        .bell-red-dot {
-          position: absolute;
-          top: 2px;
-          right: 2px;
-          width: 10px;
-          height: 10px;
-          background-color: var(--color-danger);
-          border-radius: 50%;
-          border: 2px solid #ffffff;
-          animation: pulse 1.5s infinite;
-        }
-        .admin-bell-badge:hover {
-          transform: scale(1.05);
-          background-color: var(--primary-light) !important;
-        }
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.3); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes slideIn {
-          from { transform: translateX(120%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Settings Classes */
-        .settings-intro {
-          color: var(--text-secondary);
-          margin-bottom: 24px;
-        }
-        .settings-form {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          max-width: 600px;
-        }
-        .form-help-text {
-          font-size: 0.8rem;
-          color: var(--text-muted);
-        }
-        .checkbox-group-container {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin-top: 6px;
-        }
-        .checkbox-row-label {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
-          font-size: 0.95rem;
-        }
-        .opening-hours-row {
-          display: flex;
-          gap: 16px;
-          align-items: center;
-        }
-        .time-input {
-          max-width: 100px;
-        }
-        .btn-fit-content {
-          width: fit-content;
-        }
-
-        /* Service Classes */
-        .admin-form-container {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-top: 20px;
-        }
-        .w-full {
-          width: 100%;
-        }
-      `}</style>
-    </div>
+    </>
   );
 }
