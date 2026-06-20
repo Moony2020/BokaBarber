@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
   devIndicators: {
-    position: 'bottom-right',
+    position: 'bottom-left',
   },
 };
 

@@ -49,8 +49,8 @@ export default function Navbar() {
 
     const handleScroll = () => {
       // Trigger area offset for sticky header height
-      const scrollPosition = window.scrollY + 120;
-      const sections = ['funktioner', 'priser', 'design', 'faq'];
+      const scrollPosition = window.scrollY + 80;
+      const sections = ['funktioner', 'design', 'priser', 'faq'];
       let found = false;
 
       for (const sectionId of sections) {
@@ -94,7 +94,13 @@ export default function Navbar() {
     // Load from localStorage immediately so Instrumentpanel shows without waiting for API
     try {
       const stored = localStorage.getItem('user');
-      if (stored) setUser(JSON.parse(stored));
+      if (stored) {
+        Promise.resolve().then(() => {
+          try {
+            setUser(JSON.parse(stored));
+          } catch {}
+        });
+      }
     } catch {}
 
     const loadUser = async () => {

@@ -4,6 +4,8 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ServiceWorkerKiller from '@/components/ServiceWorkerKiller';
+import ScrollToTop from '@/components/ScrollToTop';
+import DevIndicatorFix from '@/components/DevIndicatorFix';
 
 const playfairDisplay = Playfair_Display({
   weight: ['400', '500', '600', '700'],
@@ -44,6 +46,8 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <ScrollToTop />
+          <DevIndicatorFix />
         </div>
       </body>
     </html>

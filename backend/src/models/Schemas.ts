@@ -77,7 +77,6 @@ const ShopSchema = new Schema<IShop>({
 }, { timestamps: true });
 
 ShopSchema.index({ 'address.coordinates': '2dsphere' });
-ShopSchema.index({ slug: 1 });
 
 // ==========================================
 // 3. SHOP SETTINGS MODEL (Tenant Settings)
