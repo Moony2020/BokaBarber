@@ -1356,9 +1356,9 @@ html:has(.bb-wrap) {
   }
   .bb-nav-btn .bb-mat-icon { font-size: 24px; } /* restore icon */
 
-  .bb-sidebar-bottom { padding: 10px 4px; align-items: center; }
-  .bb-view-btn { display: grid; place-items: center; padding: 10px 0; font-size: 0; gap: 0; }
-  .bb-view-btn .bb-mat-icon { font-size: 20px; line-height: 1; }
+  .bb-sidebar-bottom { padding: 10px 4px; align-items: center; width: 68px; }
+  .bb-view-btn { display: flex; align-items: center; justify-content: center; padding: 10px 0; font-size: 0; gap: 0; width: 100%; }
+  .bb-view-btn .bb-mat-icon { font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; }
   .bb-bell-btn { font-size: 0; padding: 10px 0; justify-content: center; }
   .bb-bell-count { font-size: 10px; }
 

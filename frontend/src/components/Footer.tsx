@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 export default function Footer() {
@@ -16,14 +17,7 @@ export default function Footer() {
           <div className="container footer-grid">
             <div className="footer-brand">
               <Link href="/" className="footer-logo" aria-label="BokaBarber startsida">
-                <svg className="barber-logo-icon footer-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="6" cy="6" r="3" />
-                  <path d="M8.12 8.12 12 12" />
-                  <path d="M20 4 12 12" />
-                  <circle cx="6" cy="18" r="3" />
-                  <path d="M9.8 14.2 12 12" />
-                  <path d="M20 20 12 12" />
-                </svg>
+                <Image unoptimized src="/brand-logo.png" alt="BokaBarber logo" width={60} height={60} className="barber-logo-icon footer-brand-icon" style={{ width: '60px', height: 'auto', objectFit: 'contain' }} />
                 <span className="brand-wordmark"><span className="brand-main">Boka</span><span className="brand-accent">Barber</span></span>
               </Link>
               <p className="brand-text">
