@@ -1412,7 +1412,7 @@ html:has(.bb-wrap) {
   .bb-nav-btn .bb-mat-icon { font-size: 20px; }
 
   .bb-sidebar-bottom { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-  .bb-view-btn { font-size: 12px; padding: 10px 14px; }
+  .bb-view-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; padding: 10px 14px; }
   .bb-bell-btn { font-size: 12px; }
 
   .bb-main { padding: 16px 14px 28px; }

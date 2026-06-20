@@ -21,13 +21,23 @@ import {
 import Stripe from 'stripe';
 import {
   sendBookingConfirmationEmail,
+  sendNewBookingNotificationToOwner,
   sendBookingCancellationEmail,
   sendSubscriptionPaymentWarningEmail,
   sendSubscriptionSuspendedEmail
 } from './services/emailService';
+import {
+  sendBookingConfirmationSMS,
+  sendNewBookingNotificationSMS
+} from './services/smsService';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const escapeHTML = (str: string) => {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, (m: string) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m));
+};
 
 if (!process.env.JWT_SECRET) {
   console.error('❌ FATAL ERROR: JWT_SECRET environment variable is missing.');
@@ -327,9 +337,6 @@ app.post('/api/v1/auth/forgot-password', async (req: Request, res: Response) => 
     await user.save();
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/aterstall-losenord?token=${token}`;
-    const transporter = (await import('./services/emailService')).default || require('./services/emailService');
-
-    // Use the existing email infrastructure
     const nodemailer = require('nodemailer');
     const smtpTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -458,7 +465,8 @@ app.get('/api/v1/shops/search', async (req, res) => {
       filter.$or = [
         { name: { $regex: new RegExp(escapedQ, 'i') } },
         { 'address.city': { $regex: new RegExp(escapedQ, 'i') } },
-        { 'address.street': { $regex: new RegExp(escapedQ, 'i') } }
+        { 'address.street': { $regex: new RegExp(escapedQ, 'i') } },
+        { 'address.zipCode': { $regex: new RegExp(escapedQ, 'i') } }
       ];
     }
 
@@ -707,28 +715,68 @@ app.post('/api/v1/bookings/hold', async (req, res) => {
     const savedBooking = await newBooking.save({ session });
     await session.commitTransaction(); session.endSession();
 
-    // Send email notification in the background
+    // Send notifications in the background (non-blocking)
     (async () => {
       try {
         const dbShop = await Shop.findById(shopId);
         const dbBarberProfile = await BarberProfile.findById(barberId);
         const dbBarberUser = dbBarberProfile ? await User.findById(dbBarberProfile.userId) : null;
-        
+        const dbOwner = await User.findOne({ shopId: new Types.ObjectId(shopId), role: 'shop_admin' });
+
         const barberName = dbBarberUser ? `${dbBarberUser.firstName} ${dbBarberUser.lastName}` : 'Okänd frisör';
         const shopAddressStr = dbShop ? `${dbShop.address.street}, ${dbShop.address.city}` : 'Salongen';
-        
+        const customerName = `${customerData.firstName} ${customerData.lastName}`;
+        const shopName = dbShop?.name || 'Vår salong';
+
+        // 1. Confirmation email → customer
         await sendBookingConfirmationEmail({
           customerEmail: customerData.email.toLowerCase().trim(),
-          customerName: `${customerData.firstName} ${customerData.lastName}`,
-          shopName: dbShop?.name || 'Vår salong',
+          customerName,
+          shopName,
           serviceName: service.name,
           barberName,
           startTime: start,
           price: service.price,
           shopAddress: shopAddressStr
         });
+
+        // 2. Confirmation SMS → customer
+        if (customerData.phoneNumber) {
+          await sendBookingConfirmationSMS({
+            phoneNumber: customerData.phoneNumber,
+            customerName,
+            shopName,
+            serviceName: service.name,
+            startTime: start
+          });
+        }
+
+        // 3. New booking notification email → shop owner
+        if (dbOwner) {
+          await sendNewBookingNotificationToOwner({
+            ownerEmail: dbOwner.email,
+            ownerName: `${dbOwner.firstName} ${dbOwner.lastName}`,
+            shopName,
+            customerName,
+            customerPhone: customerData.phoneNumber || 'Ej angivet',
+            serviceName: service.name,
+            barberName,
+            startTime: start,
+            price: service.price
+          });
+
+          // 4. New booking notification SMS → shop owner
+          if (dbOwner.phoneNumber) {
+            await sendNewBookingNotificationSMS({
+              ownerPhone: dbOwner.phoneNumber,
+              customerName,
+              serviceName: service.name,
+              startTime: start
+            });
+          }
+        }
       } catch (err) {
-        console.error('Error sending confirmation email:', err);
+        console.error('Error sending booking notifications:', err);
       }
     })();
 

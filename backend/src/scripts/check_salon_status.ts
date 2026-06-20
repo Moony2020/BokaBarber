@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Shop, Subscription, User } from '../models/Schemas';
+import { Shop, Subscription } from '../models/Schemas';
 import dotenv from 'dotenv';
 dotenv.config();
 
