@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { api } from '@/utils/api';
 import './admin-dashboard.css';
 
@@ -64,6 +66,11 @@ export default function ShopAdminDashboard() {
   const [subscription, setSubscription] = useState<{status:string;trialEndsAt:string;gracePeriodEndsAt?:string}|null>(null);
   const [newBookingNotifications, setNewBookingNotifications] = useState<string[]>([]);
 
+  const trialDaysLeft = useMemo(() => {
+    if (subscription?.status !== 'trial') return 0;
+    return Math.max(0, Math.ceil((new Date(subscription.trialEndsAt).getTime() - new Date().getTime()) / 86400000));
+  }, [subscription]);
+
   const [newBarberFirstName, setNewBarberFirstName] = useState('');
   const [newBarberLastName, setNewBarberLastName] = useState('');
   const [newBarberEmail, setNewBarberEmail] = useState('');
@@ -97,29 +104,7 @@ export default function ShopAdminDashboard() {
     finally { setPaypalLoading(null); }
   };
 
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const payment = p.get('payment'), sessionId = p.get('session_id');
-    const paypal = p.get('paypal'), orderId = p.get('token');
-    const plan = (p.get('plan') || 'bas') as 'bas'|'pro';
-    if (payment === 'success' && sessionId) {
-      api.verifyStripeSession(shopId, sessionId).then(res => {
-        if (res.ok) { showToast('Betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); window.history.replaceState({}, '', `/admin/${shopId}`); loadDashboard(); }
-        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
-      });
-    } else if (payment === 'cancelled') {
-      showToast('Betalningen avbröts. Välj en plan för att fortsätta.', 'error');
-      window.history.replaceState({}, '', `/admin/${shopId}`);
-    } else if (paypal === 'success' && orderId) {
-      api.capturePayPalOrder(shopId, orderId, plan).then(res => {
-        if (res.ok) { showToast('PayPal-betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); window.history.replaceState({}, '', `/admin/${shopId}`); loadDashboard(); }
-        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
-      });
-    } else if (paypal === 'cancelled') {
-      showToast('PayPal-betalningen avbröts. Välj en plan för att fortsätta.', 'error');
-      window.history.replaceState({}, '', `/admin/${shopId}`);
-    }
-  }, [shopId]);
+
 
   useEffect(() => {
     const fetchShopInfo = async () => {
@@ -155,12 +140,36 @@ export default function ShopAdminDashboard() {
     setLoading(true); setError('');
     try {
       const res = await api.adminDashboard(shopId);
-      if (res.ok) { const d = res.data as any; setStats(d); setSubscription(d.subscription); }
+      if (res.ok) { const d = res.data as DashboardStats & { subscription: typeof subscription }; setStats(d); setSubscription(d.subscription); }
       const bk = await api.adminBookings(shopId);
       if (bk.ok) setBookings((bk.data as { bookings: BookingItem[] }).bookings || []);
     } catch { setError('Kunde inte hämta data från servern.'); }
     finally { setLoading(false); }
   }, [shopId]);
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const payment = p.get('payment'), sessionId = p.get('session_id');
+    const paypal = p.get('paypal'), orderId = p.get('token');
+    const plan = (p.get('plan') || 'bas') as 'bas'|'pro';
+    if (payment === 'success' && sessionId) {
+      api.verifyStripeSession(shopId, sessionId).then(res => {
+        if (res.ok) { showToast('Betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); router.replace(`/admin/${shopId}`); loadDashboard(); }
+        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
+      });
+    } else if (payment === 'cancelled') {
+      Promise.resolve().then(() => showToast('Betalningen avbröts. Välj en plan för att fortsätta.', 'error'));
+      router.replace(`/admin/${shopId}`);
+    } else if (paypal === 'success' && orderId) {
+      api.capturePayPalOrder(shopId, orderId, plan).then(res => {
+        if (res.ok) { showToast('PayPal-betalning genomförd! Ditt abonnemang är nu aktivt.', 'success'); router.replace(`/admin/${shopId}`); loadDashboard(); }
+        else showToast('Betalning mottagen men kunde inte aktiveras. Kontakta support.', 'error');
+      });
+    } else if (paypal === 'cancelled') {
+      Promise.resolve().then(() => showToast('PayPal-betalningen avbröts. Välj en plan för att fortsätta.', 'error'));
+      router.replace(`/admin/${shopId}`);
+    }
+  }, [shopId, router, loadDashboard]);
 
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -221,11 +230,13 @@ export default function ShopAdminDashboard() {
   }, [activeTab, bookings, pollDashboardSilently]);
 
   useEffect(() => {
-    if (activeTab === 'oversikt' || activeTab === 'kalender') loadDashboard();
-    else if (activeTab === 'tjanster') loadServices();
-    else if (activeTab === 'personal') { loadBarbers(); loadServices(); }
-    else if (activeTab === 'kunder') loadCustomers();
-    else if (activeTab === 'installningar') loadSettings();
+    Promise.resolve().then(() => {
+      if (activeTab === 'oversikt' || activeTab === 'kalender') loadDashboard();
+      else if (activeTab === 'tjanster') loadServices();
+      else if (activeTab === 'personal') { loadBarbers(); loadServices(); }
+      else if (activeTab === 'kunder') loadCustomers();
+      else if (activeTab === 'installningar') loadSettings();
+    });
   }, [activeTab, loadDashboard, loadServices, loadBarbers, loadCustomers, loadSettings]);
 
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
@@ -274,7 +285,7 @@ export default function ShopAdminDashboard() {
           <div style={{ fontSize:'2.5rem', marginBottom:16 }}>🔐</div>
           <h2 style={{ fontFamily:'Playfair Display,serif', fontSize:'1.8rem', color:'#775a19', marginBottom:12 }}>Åtkomst nekad</h2>
           <p style={{ color:'#4e4639', lineHeight:1.6, marginBottom:28 }}>{authError}</p>
-          <a href="/login" style={{ display:'inline-block', background:'#c5a059', color:'white', fontWeight:700, padding:'14px 32px', borderRadius:8, textDecoration:'none' }}>Logga in →</a>
+          <Link href="/login" style={{ display:'inline-block', background:'#c5a059', color:'white', fontWeight:700, padding:'14px 32px', borderRadius:8, textDecoration:'none' }}>Logga in →</Link>
         </div>
       </div>
     );
@@ -464,10 +475,9 @@ export default function ShopAdminDashboard() {
             </div>
 
             {/* Banners */}
-            {subscription?.status==='trial' && new Date(subscription.trialEndsAt)>=new Date() && (()=>{
-              const days = Math.max(0,Math.ceil((new Date(subscription.trialEndsAt).getTime()-Date.now())/86400000));
-              return <div className="bb-trial-banner">ℹ️ Du har <strong>{days}</strong> {days===1?'dag':'dagar'} kvar av din gratis provperiod.</div>;
-            })()}
+            {subscription?.status==='trial' && new Date(subscription.trialEndsAt)>=new Date() && (
+              <div className="bb-trial-banner">ℹ️ Du har <strong>{trialDaysLeft}</strong> {trialDaysLeft===1?'dag':'dagar'} kvar av din gratis provperiod.</div>
+            )}
             {subscription?.status==='past_due' && <div className="bb-warn-banner">⚠️ Betalningen misslyckades. Uppdatera din betalningsmetod.</div>}
             {error && <div className="bb-error-banner">⚠️ {error}</div>}
 
@@ -649,7 +659,7 @@ export default function ShopAdminDashboard() {
                             <span className="bb-mat-icon" style={{fontSize:15,color:'#775a19'}}>mail</span>
                             {b.email}
                           </div>
-                          {b.bio && <p className="bb-staff-bio">"{b.bio}"</p>}
+                          {b.bio && <p className="bb-staff-bio">&ldquo;{b.bio}&rdquo;</p>}
                           {b.services.length > 0 && (
                             <div className="bb-staff-tags">
                               {b.services.slice(0,4).map(s=><span key={s} className="bb-staff-tag">{s}</span>)}
@@ -802,7 +812,7 @@ export default function ShopAdminDashboard() {
                             else setAcceptedPaymentMethods(acceptedPaymentMethods.filter(x=>x!==m.key));
                           }} />
                           {m.key==='swish' && (
-                            <img src="/swish.svg" width={34} height={34} alt="Swish" style={{flexShrink:0}} />
+                            <Image src="/swish.svg" width={34} height={34} alt="Swish" style={{flexShrink:0}} />
                           )}
                           {m.key==='card' && (
                             <svg viewBox="0 0 86 54" width="44" height="28" style={{flexShrink:0}}>
