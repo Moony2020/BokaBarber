@@ -75,11 +75,11 @@ export default function SupportPage() {
       <style jsx>{`
         .support-container {
           min-height: calc(100vh - 160px);
-          padding: 60px 24px;
+          padding: 20px 24px 60px;
           background: radial-gradient(circle at 50% 10%, rgba(197, 160, 89, 0.04) 0%, transparent 50%);
         }
         .support-inner {
-          max-width: 900px;
+          max-width: 1000px;
         }
         .support-card {
           padding: 48px 40px;
@@ -137,6 +137,10 @@ export default function SupportPage() {
           align-items: flex-start;
           gap: 12px;
           padding: 28px;
+        }
+        .support-item-card:hover,
+        .support-contact-block:hover {
+          transform: none !important;
         }
         .support-item-card .icon {
           font-size: 2rem;

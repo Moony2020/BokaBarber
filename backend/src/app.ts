@@ -11,7 +11,7 @@ import jwt from 'jsonwebtoken';
 import { connectDB } from './config/db';
 import {
   User, Shop, ShopSettings, Booking, CustomerProfile,
-  Service, BarberProfile, Plan, Subscription, Review, AuditLog
+  Service, BarberProfile, Plan, Subscription, Review, AuditLog, Notification
 } from './models/Schemas';
 import {
   authenticateUser, requireRoles, verifyTenantAccess,
@@ -462,11 +462,16 @@ app.get('/api/v1/shops/search', async (req, res) => {
     
     if (q) {
       const escapedQ = escapeRegExp(q as string);
+      // Also find shops via matching service names
+      const serviceShopIds = await Service.distinct('shopId', {
+        name: { $regex: new RegExp(escapedQ, 'i') }, isActive: true
+      });
       filter.$or = [
         { name: { $regex: new RegExp(escapedQ, 'i') } },
         { 'address.city': { $regex: new RegExp(escapedQ, 'i') } },
         { 'address.street': { $regex: new RegExp(escapedQ, 'i') } },
-        { 'address.zipCode': { $regex: new RegExp(escapedQ, 'i') } }
+        { 'address.zipCode': { $regex: new RegExp(escapedQ, 'i') } },
+        ...(serviceShopIds.length > 0 ? [{ _id: { $in: serviceShopIds } }] : [])
       ];
     }
 
@@ -774,6 +779,25 @@ app.post('/api/v1/bookings/hold', async (req, res) => {
               startTime: start
             });
           }
+
+          // 5. In-App Notification → shop dashboard
+          const dateStr = start.toLocaleDateString('sv-SE', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+          const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+          
+          await Notification.create({
+            shopId: new Types.ObjectId(shopId),
+            type: 'new_booking',
+            title: 'Ny bokning',
+            message: `Du har en ny bokning`,
+            bookingId: savedBooking._id,
+            customerName,
+            serviceName: service.name,
+            barberName,
+            bookingDate: dateStr,
+            bookingTime: timeStr,
+            price: service.price
+          });
+
         }
       } catch (err) {
         console.error('Error sending booking notifications:', err);
@@ -791,6 +815,53 @@ app.post('/api/v1/bookings/hold', async (req, res) => {
 // ===========================================================================
 // 💈 SHOP ADMIN ROUTES (Protected: shop_admin + tenant isolation)
 // ===========================================================================
+
+// Get notifications
+app.get('/api/v1/admin/:shopId/notifications', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const notifications = await Notification.find({ shopId: new Types.ObjectId(req.params.shopId) })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    return res.json({ notifications });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return res.status(500).json({ error: 'Kunde inte hämta aviseringar.' });
+  }
+});
+
+// Mark notification as read
+app.patch('/api/v1/admin/:shopId/notifications/:notificationId/read', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { shopId, notificationId } = req.params;
+    const notification = await Notification.findOneAndUpdate(
+      { _id: new Types.ObjectId(notificationId), shopId: new Types.ObjectId(shopId) },
+      { $set: { read: true } },
+      { new: true }
+    );
+    if (!notification) return res.status(404).json({ error: 'Avisering hittades inte.' });
+    return res.json({ message: 'Avisering markerad som läst.', notification });
+  } catch (error) {
+    console.error('Error marking notification read:', error);
+    return res.status(500).json({ error: 'Kunde inte markera avisering som läst.' });
+  }
+});
+
+// Mark all notifications as read
+app.patch('/api/v1/admin/:shopId/notifications/read-all', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { shopId } = req.params;
+    await Notification.updateMany(
+      { shopId: new Types.ObjectId(shopId), read: false },
+      { $set: { read: true } }
+    );
+    return res.json({ message: 'Alla aviseringar markerade som lästa.' });
+  } catch (error) {
+    console.error('Error marking all notifications read:', error);
+    return res.status(500).json({ error: 'Kunde inte markera aviseringar som lästa.' });
+  }
+});
+
 
 // Dashboard stats
 app.get('/api/v1/admin/:shopId/dashboard', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
@@ -966,6 +1037,22 @@ app.post('/api/v1/admin/:shopId/services',
     return res.status(201).json({ service });
   } catch (error) {
     return res.status(500).json({ error: 'Kunde inte skapa tjänst.' });
+  }
+});
+
+// Update service details
+app.put('/api/v1/admin/:shopId/services/:serviceId', authenticateUser, requireRoles('shop_admin', 'super_admin'), verifyTenantAccess, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name, description, durationMinutes, price } = req.body;
+    const service = await Service.findOneAndUpdate(
+      { _id: req.params.serviceId, shopId: new Types.ObjectId(req.params.shopId) },
+      { $set: { name, description, durationMinutes, price } },
+      { new: true }
+    );
+    if (!service) return res.status(404).json({ error: 'Tjänst hittades inte.' });
+    return res.json({ service });
+  } catch (error) {
+    return res.status(500).json({ error: 'Kunde inte uppdatera tjänst.' });
   }
 });
 

@@ -2,9 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+const HOMEPAGE_CATEGORIES = [
+  { label: 'Klippning',    q: 'Klippning',    img: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Skinfade',     q: 'Skinfade',     img: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Skägg',        q: 'Skäggtrimning',img: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Rakning',      q: 'Rakning',      img: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=600&auto=format&fit=crop' },
+  { label: 'Styling',      q: 'Styling',      img: 'https://images.unsplash.com/photo-1517832606299-7ae9b720a186?q=80&w=600&auto=format&fit=crop' },
+];
 
 export default function HomePage() {
+  const router = useRouter();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [heroSearchQ, setHeroSearchQ] = useState('');
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = heroSearchQ.trim();
+    router.push(q ? `/sok?city=${encodeURIComponent(q)}` : '/sok');
+  };
 
   const slides = [
     '/slide1.webp',
@@ -150,6 +167,21 @@ export default function HomePage() {
                   Se demo
                 </Link>
               </div>
+
+              <form className="hero-customer-search" onSubmit={handleHeroSearch}>
+                <div className="hero-search-bar">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="hero-search-ico"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input
+                    type="text"
+                    className="hero-search-input"
+                    placeholder="Hitta salong i din stad..."
+                    value={heroSearchQ}
+                    onChange={e => setHeroSearchQ(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <button type="submit" className="hero-search-btn">Sök</button>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -173,6 +205,28 @@ export default function HomePage() {
                 <span className="stat-label">PREMIUM SALONGER</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 📋 KATEGORIER — Customer booking section */}
+      <section className="home-kategorier-section">
+        <div className="container">
+          <div className="home-kat-header">
+            <h2 className="home-kat-title text-serif">Kategorier</h2>
+            <Link href="/sok" className="home-kat-link">Visa alla →</Link>
+          </div>
+          <div className="home-kat-grid">
+            {HOMEPAGE_CATEGORIES.map(cat => (
+              <Link key={cat.label} href={`/sok?q=${encodeURIComponent(cat.q)}`} className="home-kat-card">
+                <div className="home-kat-img-wrap">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cat.img} alt={cat.label} className="home-kat-img" loading="lazy" />
+                  <div className="home-kat-overlay" />
+                </div>
+                <span className="home-kat-label">{cat.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

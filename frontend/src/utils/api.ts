@@ -98,6 +98,9 @@ export const api = {
   adminCreateService: (shopId: string, data: unknown) =>
     apiFetch(`/admin/${shopId}/services`, { method: 'POST', body: data }),
 
+  adminUpdateService: (shopId: string, serviceId: string, data: { name: string; description?: string; durationMinutes: number; price: number }) =>
+    apiFetch(`/admin/${shopId}/services/${serviceId}`, { method: 'PUT', body: data }),
+
   adminToggleService: (shopId: string, serviceId: string) =>
     apiFetch(`/admin/${shopId}/services/${serviceId}/toggle`, { method: 'PUT' }),
 
@@ -115,6 +118,15 @@ export const api = {
 
   adminUpdateSettings: (shopId: string, data: unknown) =>
     apiFetch(`/admin/${shopId}/settings`, { method: 'PUT', body: data }),
+
+  adminNotifications: (shopId: string) =>
+    apiFetch(`/admin/${shopId}/notifications`),
+
+  adminMarkNotificationRead: (shopId: string, notificationId: string) =>
+    apiFetch(`/admin/${shopId}/notifications/${notificationId}/read`, { method: 'PATCH' }),
+
+  adminMarkAllNotificationsRead: (shopId: string) =>
+    apiFetch(`/admin/${shopId}/notifications/read-all`, { method: 'PATCH' }),
 
   // Super Admin
   superDashboard: () => apiFetch('/super/dashboard'),

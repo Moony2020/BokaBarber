@@ -23,6 +23,14 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const isDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/super') || pathname === '/dashboard';
+
+  // Shop booking pages — any single-segment path that isn't a known public route
+  const KNOWN_PUBLIC = ['/', '/sok', '/login', '/registrera-salong', '/kontakt', '/support',
+    '/terms', '/privacy', '/glomt-losenord', '/aterstall-losenord'];
+  const isShopPage = !isDashboard && !!pathname &&
+    !KNOWN_PUBLIC.includes(pathname) &&
+    pathname.split('/').filter(Boolean).length === 1;
+
   const navbarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -150,21 +158,25 @@ export default function Navbar() {
     window.location.href = '/dashboard';
   };
 
+  const hideMarketingLinks = isDashboard || isShopPage;
+
   return (
     <header ref={navbarRef} className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}${menuOpen ? ' menu-open' : ''}`}>
       <div className="container navbar-inner">
-        <Link href="/#hero" className="navbar-logo" aria-label="BokaBarber startsida">
+        <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
           <Image unoptimized priority src="/brand-logo.png" alt="BokaBarber logo" width={45} height={45} className="barber-logo-icon navbar-logo-icon" style={{ width: '45px', height: 'auto', objectFit: 'contain' }} />
           <span className="brand-wordmark"><span className="brand-main">Boka</span><span className="brand-accent">Barber</span></span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="navbar-nav">
-          <Link href="/#funktioner" className={`nav-link ${activeHash === '#funktioner' ? 'active' : ''}`}>Funktioner</Link>
-          <Link href="/#priser" className={`nav-link ${activeHash === '#priser' ? 'active' : ''}`}>Prissättning</Link>
-          <Link href="/#design" className={`nav-link ${activeHash === '#design' ? 'active' : ''}`}>Design</Link>
-          <Link href="/#faq" className={`nav-link ${activeHash === '#faq' ? 'active' : ''}`}>Om Oss</Link>
-        </nav>
+        {/* Marketing nav — hidden on admin and shop booking pages */}
+        {!hideMarketingLinks && (
+          <nav className="navbar-nav">
+            <Link href="/#funktioner" className={`nav-link ${activeHash === '#funktioner' ? 'active' : ''}`}>Funktioner</Link>
+            <Link href="/#priser" className={`nav-link ${activeHash === '#priser' ? 'active' : ''}`}>Prissättning</Link>
+            <Link href="/#design" className={`nav-link ${activeHash === '#design' ? 'active' : ''}`}>Design</Link>
+            <Link href="/#faq" className={`nav-link ${activeHash === '#faq' ? 'active' : ''}`}>Om Oss</Link>
+          </nav>
+        )}
 
         <div className="navbar-actions">
           {user ? (

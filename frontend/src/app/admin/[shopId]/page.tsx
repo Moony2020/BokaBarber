@@ -28,6 +28,12 @@ interface CustomerItem {
   _id: string; firstName: string; lastName: string;
   email: string; phoneNumber: string; bookingCount: number;
 }
+interface NotificationItem {
+  _id: string; type: string; title: string; message: string;
+  bookingId?: string; customerName?: string; serviceName?: string;
+  barberName?: string; bookingDate?: string; bookingTime?: string;
+  price?: number; read: boolean; createdAt: string;
+}
 
 export default function ShopAdminDashboard() {
   const params = useParams();
@@ -47,6 +53,12 @@ export default function ShopAdminDashboard() {
   const [barbers, setBarbers] = useState<BarberItem[]>([]);
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
 
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [editServiceName, setEditServiceName] = useState('');
+  const [editServiceDesc, setEditServiceDesc] = useState('');
+  const [editServiceDuration, setEditServiceDuration] = useState(30);
+  const [editServicePrice, setEditServicePrice] = useState(0);
+
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
   const [newServiceDuration, setNewServiceDuration] = useState<number|''>(30);
@@ -64,7 +76,8 @@ export default function ShopAdminDashboard() {
   const [shopName, setShopName] = useState('');
   const [shopSlug, setShopSlug] = useState('');
   const [subscription, setSubscription] = useState<{status:string;trialEndsAt:string;gracePeriodEndsAt?:string}|null>(null);
-  const [newBookingNotifications, setNewBookingNotifications] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const trialDaysLeft = useMemo(() => {
     if (subscription?.status !== 'trial') return 0;
@@ -131,10 +144,30 @@ export default function ShopAdminDashboard() {
         else setAuthError('Kunde inte verifiera behörighet. Kontrollera att servern är igång.');
       } catch { setAuthError('Nätverksfel — kontrollera att servern körs på localhost:5000.'); }
     };
+
+    const fetchNotifications = async () => {
+      if (!shopId) return;
+      try {
+        const res = await api.adminNotifications(shopId);
+        if (res.ok) {
+          const data = res.data as { notifications: NotificationItem[] };
+          setNotifications(data.notifications || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch notifications', err);
+      }
+    };
+
     verifyAuth();
-    const interval = setInterval(verifyAuth, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchNotifications();
+
+    const authInterval = setInterval(verifyAuth, 60000);
+    const notifInterval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
+    return () => {
+      clearInterval(authInterval);
+      clearInterval(notifInterval);
+    };
+  }, [shopId]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true); setError('');
@@ -214,7 +247,6 @@ export default function ShopAdminDashboard() {
         const existingIds = new Set(currentBookings.map(b => b._id));
         const newArrivals = fresh.filter(b => !existingIds.has(b._id) && b.status === 'confirmed');
         if (newArrivals.length > 0) {
-          setNewBookingNotifications(prev => [...prev, ...newArrivals.map(b => `${b.customerName} (${b.serviceName})`)]);
           setBookings(fresh);
           const r = await api.adminDashboard(shopId);
           if (r.ok) setStats(r.data as DashboardStats);
@@ -239,6 +271,29 @@ export default function ShopAdminDashboard() {
     });
   }, [activeTab, loadDashboard, loadServices, loadBarbers, loadCustomers, loadSettings]);
 
+  const handleMarkNotificationRead = async (notifId: string) => {
+    try {
+      const res = await api.adminMarkNotificationRead(shopId, notifId);
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      const res = await api.adminMarkAllNotificationsRead(shopId);
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setShowNotificationsDropdown(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
     await api.adminUpdateBookingStatus(shopId, bookingId, newStatus);
     loadDashboard();
@@ -255,6 +310,21 @@ export default function ShopAdminDashboard() {
   };
 
   const handleToggleService = async (serviceId: string) => { await api.adminToggleService(shopId, serviceId); loadServices(); };
+
+  const startEditService = (s: ServiceItem) => {
+    setEditingServiceId(s._id);
+    setEditServiceName(s.name);
+    setEditServiceDesc(s.description || '');
+    setEditServiceDuration(s.durationMinutes);
+    setEditServicePrice(s.price);
+  };
+
+  const handleSaveEditService = async () => {
+    if (!editingServiceId) return;
+    const res = await api.adminUpdateService(shopId, editingServiceId, { name: editServiceName, description: editServiceDesc, durationMinutes: editServiceDuration, price: editServicePrice });
+    if (res.ok) { showToast('Tjänst uppdaterad!', 'success'); setEditingServiceId(null); loadServices(); }
+    else showToast('Kunde inte spara.', 'error');
+  };
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -390,23 +460,15 @@ export default function ShopAdminDashboard() {
       `}</style>
 
       {/* Toasts */}
-      {(toast || newBookingNotifications.length > 0) && (
+      {toast && (
         <div className="bb-toasts">
-          {toast && (
-            <div className={`bb-toast bb-toast-${toast.type}`}>
-              <div className="bb-toast-body">
-                <span>{toast.type==='success'?'✅':toast.type==='error'?'❌':'ℹ️'}</span>
-                <strong style={{color:'#1b1c1c',fontSize:14}}>{toast.message}</strong>
-              </div>
-              <button onClick={()=>setToast(null)} className="bb-toast-close">×</button>
+          <div className={`bb-toast bb-toast-${toast.type}`}>
+            <div className="bb-toast-body">
+              <span>{toast.type==='success'?'✅':toast.type==='error'?'❌':'ℹ️'}</span>
+              <strong style={{color:'#1b1c1c',fontSize:14}}>{toast.message}</strong>
             </div>
-          )}
-          {newBookingNotifications.map((n,i)=>(
-            <div key={i} className="bb-toast bb-toast-info">
-              <div className="bb-toast-body">🔔 <strong>Ny bokning!</strong> {n}</div>
-              <button onClick={()=>setNewBookingNotifications(p=>p.filter((_,j)=>j!==i))} className="bb-toast-close">×</button>
-            </div>
-          ))}
+            <button onClick={()=>setToast(null)} className="bb-toast-close">×</button>
+          </div>
         </div>
       )}
 
@@ -432,11 +494,6 @@ export default function ShopAdminDashboard() {
           </nav>
 
           <div className="bb-sidebar-bottom">
-            {newBookingNotifications.length > 0 && (
-              <button className="bb-bell-btn" onClick={()=>{setActiveTab('oversikt');setNewBookingNotifications([]);}}>
-                🔔 <span className="bb-bell-count">{newBookingNotifications.length}</span> ny bokning
-              </button>
-            )}
             {shopSlug && (
               <a href={`/${shopSlug}`} target="_blank" rel="noopener noreferrer" className="bb-view-btn">
                 <span className="bb-mat-icon" style={{fontSize:18}}>public</span> Visa bokningssida
@@ -463,15 +520,54 @@ export default function ShopAdminDashboard() {
                   {activeTab==='installningar'&&'Konfigurera salongens globala inställningar. Ändringar sparas direkt.'}
                 </p>
               </div>
-              {activeTab==='oversikt' && (
-                <div className="bb-date-chip">
-                  <span className="bb-mat-icon" style={{color:'#775a19',fontSize:20}}>event</span>
-                  <span>{today}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)} style={{ background:'transparent', border:'none', fontSize:'24px', cursor:'pointer', position:'relative', padding:0 }}>
+                    🔔
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <span style={{ position:'absolute', top:-4, right:-4, background:'#e74c3c', color:'white', fontSize:'10px', fontWeight:'bold', borderRadius:'50%', width:'18px', height:'18px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        {notifications.filter(n => !n.read).length}
+                      </span>
+                    )}
+                  </button>
+                  {showNotificationsDropdown && (
+                    <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '8px', background: 'white', border: '1px solid #e0e0e0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', width: '320px', zIndex: 1000, maxHeight: '400px', overflowY: 'auto' }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'white' }}>
+                        <strong style={{ fontSize: '14px', color: '#333' }}>Aviseringar</strong>
+                        {notifications.filter(n => !n.read).length > 0 && (
+                          <button onClick={handleMarkAllNotificationsRead} style={{ background: 'transparent', border: 'none', color: '#c5a059', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Markera alla som lästa</button>
+                        )}
+                      </div>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '16px', textAlign: 'center', color: '#777', fontSize: '13px' }}>Inga nya aviseringar</div>
+                      ) : (
+                        notifications.map(n => (
+                          <div key={n._id} onClick={() => !n.read && handleMarkNotificationRead(n._id)} style={{ padding: '12px 16px', borderBottom: '1px solid #f5f5f5', cursor: n.read ? 'default' : 'pointer', background: n.read ? 'white' : '#fdf9f1' }}>
+                            <div style={{ fontSize: '13px', fontWeight: n.read ? 'normal' : 'bold', color: '#333', marginBottom: '4px' }}>{n.title}</div>
+                            <div style={{ fontSize: '12px', color: '#555' }}>
+                              {n.customerName} {n.type === 'new_booking' ? 'har bokat' : ''} {n.serviceName} hos {n.barberName}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#999', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{n.bookingDate} kl {n.bookingTime}</span>
+                              <span style={{ fontWeight: 'bold', color: '#775a19' }}>{n.price} kr</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-              {activeTab==='tjanster' && (
-                <span className="bb-live-badge" style={{alignSelf:'flex-end'}}>Live Nu</span>
-              )}
+
+                {activeTab==='oversikt' && (
+                  <div className="bb-date-chip">
+                    <span className="bb-mat-icon" style={{color:'#775a19',fontSize:20}}>event</span>
+                    <span>{today}</span>
+                  </div>
+                )}
+                {activeTab==='tjanster' && (
+                  <span className="bb-live-badge" style={{alignSelf:'flex-end'}}>Live Nu</span>
+                )}
+              </div>
             </div>
 
             {/* Banners */}
@@ -596,24 +692,44 @@ export default function ShopAdminDashboard() {
                   ) : (
                     <div style={{display:'flex',flexDirection:'column',gap:12}}>
                       {services.map(s=>(
-                        <div key={s._id} className={`bb-svc-card${!s.isActive?' bb-dim':''}`}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <h4 className="bb-svc-name">{s.name}</h4>
-                            {s.description && <p className="bb-svc-desc">{s.description}</p>}
-                            <div className="bb-svc-meta">
-                              <span className="bb-svc-meta-item">
-                                <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>schedule</span>
-                                {s.durationMinutes} min
-                              </span>
-                              <span className="bb-svc-meta-item">
-                                <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>payments</span>
-                                {s.price} kr
-                              </span>
+                        <div key={s._id} className={`bb-svc-card${!s.isActive?' bb-dim':''}`} style={{flexDirection:'column',gap:12}}>
+                          {editingServiceId === s._id ? (
+                            <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%'}}>
+                              <input value={editServiceName} onChange={e=>setEditServiceName(e.target.value)} className="bb-input" placeholder="Namn" />
+                              <input value={editServiceDesc} onChange={e=>setEditServiceDesc(e.target.value)} className="bb-input" placeholder="Beskrivning (valfri)" />
+                              <div style={{display:'flex',gap:8}}>
+                                <input type="number" value={editServiceDuration} onChange={e=>setEditServiceDuration(Number(e.target.value))} className="bb-input" placeholder="Min" style={{flex:1}} />
+                                <input type="number" value={editServicePrice} onChange={e=>setEditServicePrice(Number(e.target.value))} className="bb-input" placeholder="Kr" style={{flex:1}} />
+                              </div>
+                              <div style={{display:'flex',gap:8}}>
+                                <button onClick={handleSaveEditService} className="bb-btn-gold-sm" style={{flex:1}}>Spara</button>
+                                <button onClick={()=>setEditingServiceId(null)} className="bb-btn-outline" style={{flex:1}}>Avbryt</button>
+                              </div>
                             </div>
-                          </div>
-                          <button onClick={()=>handleToggleService(s._id)} className={s.isActive?'bb-btn-outline':'bb-btn-gold-sm'}>
-                            {s.isActive?'Inaktivera':'Aktivera'}
-                          </button>
+                          ) : (
+                            <div style={{display:'flex',alignItems:'flex-start',gap:12,width:'100%'}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <h4 className="bb-svc-name">{s.name}</h4>
+                                {s.description && <p className="bb-svc-desc">{s.description}</p>}
+                                <div className="bb-svc-meta">
+                                  <span className="bb-svc-meta-item">
+                                    <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>schedule</span>
+                                    {s.durationMinutes} min
+                                  </span>
+                                  <span className="bb-svc-meta-item">
+                                    <span className="bb-mat-icon" style={{fontSize:17,color:'#775a19'}}>payments</span>
+                                    {s.price} kr
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                                <button onClick={()=>startEditService(s)} className="bb-btn-outline" style={{fontSize:'0.72rem',padding:'6px 12px'}}>Redigera</button>
+                                <button onClick={()=>handleToggleService(s._id)} className={s.isActive?'bb-btn-outline':'bb-btn-gold-sm'} style={{fontSize:'0.72rem',padding:'6px 12px'}}>
+                                  {s.isActive?'Inaktivera':'Aktivera'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

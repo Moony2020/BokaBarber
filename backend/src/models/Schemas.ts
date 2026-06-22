@@ -398,6 +398,43 @@ const AuditLogSchema = new Schema<IAuditLog>({
   userAgent: { type: String, required: true }
 }, { timestamps: true });
 
+// ==========================================
+// 14. NOTIFICATION MODEL (In-App Dashboard)
+// ==========================================
+export interface INotification extends Document {
+  shopId: Types.ObjectId;
+  type: string;
+  title: string;
+  message: string;
+  bookingId?: Types.ObjectId;
+  customerName?: string;
+  serviceName?: string;
+  barberName?: string;
+  bookingDate?: string;
+  bookingTime?: string;
+  price?: number;
+  read: boolean;
+  createdAt: Date;
+}
+
+const NotificationSchema = new Schema<INotification>({
+  shopId: { type: Schema.Types.ObjectId, ref: 'Shop', required: true, index: true },
+  type: { type: String, required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  customerName: { type: String },
+  serviceName: { type: String },
+  barberName: { type: String },
+  bookingDate: { type: String },
+  bookingTime: { type: String },
+  price: { type: Number },
+  read: { type: Boolean, default: false, index: true }
+}, { timestamps: true });
+
+NotificationSchema.index({ shopId: 1, read: 1 });
+NotificationSchema.index({ createdAt: -1 });
+
 // Expose Mongoose Models
 export const User = model<IUser>('User', UserSchema);
 export const Shop = model<IShop>('Shop', ShopSchema);
@@ -412,3 +449,4 @@ export const Subscription = model<ISubscription>('Subscription', SubscriptionSch
 export const Review = model<IReview>('Review', ReviewSchema);
 export const Coupon = model<ICoupon>('Coupon', CouponSchema);
 export const AuditLog = model<IAuditLog>('AuditLog', AuditLogSchema);
+export const Notification = model<INotification>('Notification', NotificationSchema);

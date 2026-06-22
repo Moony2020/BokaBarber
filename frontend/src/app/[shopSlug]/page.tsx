@@ -26,7 +26,25 @@ interface ShopData {
   address: { street: string; city: string; zipCode: string };
   rating: number;
   reviewCount: number;
+  phone?: string;
 }
+
+interface OpeningHour {
+  dayOfWeek: number; // 0=Sun 1=Mon … 6=Sat
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
+const SV_DAYS_FULL = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
+
+const isOpenNow = (hours: OpeningHour[]): boolean => {
+  const now = new Date();
+  const day = hours.find(h => h.dayOfWeek === now.getDay());
+  if (!day?.isOpen) return false;
+  const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  return cur >= day.openTime && cur < day.closeTime;
+};
 
 interface CustomerFormData {
   firstName: string;
@@ -122,7 +140,7 @@ export default function ShopBookingPage() {
 
   // Real data from backend
   const [shop, setShop] = useState<ShopData | null>(null);
-  const [settings, setSettings] = useState<{ acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[] } | null>(null);
+  const [settings, setSettings] = useState<{ acceptedPaymentMethods?: ('swish' | 'card' | 'cash')[]; openingHours?: OpeningHour[] } | null>(null);
   const [services, setServices] = useState<ServiceData[]>([]);
   const [barbers, setBarbers] = useState<BarberData[]>([]);
   const [slots, setSlots] = useState<string[]>([]);
@@ -891,15 +909,155 @@ export default function ShopBookingPage() {
 
   return (
     <div className="booking-page public-theme animate-fade-in">
-      {/* Decorative Aura Backgrounds */}
-      <div className="soft-aura aura-top"></div>
-      <div className="soft-aura aura-bottom"></div>
+      {/* ── HERO SECTION ── */}
+      {shop && (
+        <section className="shop-hero">
+          <div className="shop-hero-bg" />
+          <div className="shop-hero-overlay" />
+          <div className="shop-hero-bottom">
+            <div className="shop-hero-card">
+              <div className="shop-hero-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="6" cy="6" r="3"/>
+                  <circle cx="6" cy="18" r="3"/>
+                  <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                  <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                  <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+                </svg>
+              </div>
+              <div className="shop-hero-main">
+                <div className="shop-hero-meta">
+                  <span className="shop-hero-badge">PREMIUM SALONG</span>
+                  {shop.rating > 0 && (
+                    <div className="shop-hero-stars">
+                      {[1,2,3,4,5].map(i => (
+                        <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i <= Math.round(shop.rating) ? '#c5a059' : 'none'} stroke="#c5a059" strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      ))}
+                      <span className="shop-hero-rating-num">{shop.rating.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+                <h1 className="shop-hero-name">{shop.name}</h1>
+                <p className="shop-hero-address">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {shop.address.street}, {shop.address.zipCode} {shop.address.city}
+                </p>
+              </div>
+              <div className="shop-hero-cta">
+                {settings?.openingHours && (
+                  <div className={`shop-open-badge ${isOpenNow(settings.openingHours) ? 'shop-open-badge--open' : 'shop-open-badge--closed'}`}>
+                    <span className="shop-open-dot" />
+                    {isOpenNow(settings.openingHours) ? 'Öppet nu' : 'Stängt nu'}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="shop-hero-book-btn"
+                  onClick={() => document.getElementById('booking-wizard')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Boka Tid Nu
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── BENTO INFO GRID ── */}
+      {shop && (
+        <div className="shop-bento-section">
+          <div className="shop-bento-grid">
+
+            {/* Opening Hours Card */}
+            <div className="shop-bento-card shop-bento-hours">
+              <div className="shop-bento-card-header">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#775a19" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <h3 className="shop-bento-card-title">ÖPPETTIDER</h3>
+              </div>
+              {settings?.openingHours ? (
+                <div className="shop-bento-hours-list">
+                  {[1,2,3,4,5,6,0].map(day => {
+                    const h = settings.openingHours!.find(x => x.dayOfWeek === day);
+                    const today = new Date().getDay() === day;
+                    return (
+                      <div key={day} className={`shop-bento-hour-row${today ? ' shop-bento-hour-today' : ''}`}>
+                        <span className="shop-bento-hour-day">{SV_DAYS_FULL[day]}</span>
+                        <span className="shop-bento-hour-time">
+                          {h?.isOpen ? `${h.openTime} — ${h.closeTime}` : 'Stängt'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="shop-bento-empty-text">Kontakta salongen för öppettider.</p>
+              )}
+            </div>
+
+            {/* About / Stats Card */}
+            <div className="shop-bento-card shop-bento-about">
+              <h3 className="shop-bento-about-title">Välkommen till {shop.name}</h3>
+              <p className="shop-bento-about-text">
+                Boka din tid enkelt och snabbt. Välj tjänst, barberare och tid som passar dig – vi ser fram emot att välkomna dig.
+              </p>
+              {shop.rating > 0 && (
+                <div className="shop-bento-stats">
+                  <div className="shop-bento-stat">
+                    <p className="shop-bento-stat-num">{shop.rating.toFixed(1)}</p>
+                    <p className="shop-bento-stat-label">KUNDBETYG</p>
+                  </div>
+                  <div className="shop-bento-stat-divider" />
+                  <div className="shop-bento-stat">
+                    <p className="shop-bento-stat-num">{shop.reviewCount}</p>
+                    <p className="shop-bento-stat-label">OMDÖMEN</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Map Card – full width, side-by-side layout */}
+            <div className="shop-bento-card shop-bento-map">
+              {/* Left: info panel */}
+              <div className="shop-map-left">
+                <div className="shop-bento-card-header">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#775a19" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <h3 className="shop-bento-card-title">HITTA HIT</h3>
+                </div>
+                <div className="shop-map-address-block">
+                  <p className="shop-map-address-label">ADRESS</p>
+                  <p className="shop-map-address-text">{shop.address.street}, {shop.address.zipCode} {shop.address.city}</p>
+                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${shop.address.street}, ${shop.address.zipCode} ${shop.address.city}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shop-map-gmaps-link"
+                >
+                  ÖPPNA I GOOGLE MAPS
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+              </div>
+              {/* Right: map iframe */}
+              <div className="shop-map-right">
+                <iframe
+                  title="Karta"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(`${shop.address.street}, ${shop.address.zipCode} ${shop.address.city}`)}&output=embed&z=16`}
+                  className="shop-map-iframe"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       <div className="container">
 
-        {/* 👑 HEADER SECTION */}
-        <section className="booking-header text-center reveal-item">
-          <h1 className="booking-title">Boka Din Ritual</h1>
+        {/* 🧙 BOOKING SECTION */}
+        <section id="booking-wizard" className="booking-header text-center reveal-item">
           <p className="booking-subtitle">Välj den tjänst, frisör och tid som passar dig bäst</p>
         </section>
 
@@ -1406,40 +1564,368 @@ export default function ShopBookingPage() {
           overflow-x: clip;
         }
 
-        /* Decorative Aura Backgrounds */
-        .soft-aura {
-          position: fixed;
-          width: min(800px, 70vw);
-          height: min(800px, 70vw);
-          background: radial-gradient(circle, rgba(75, 0, 130, 0.04) 0%, transparent 70%);
-          z-index: -1;
-          pointer-events: none;
-          animation: float-aura 20s infinite alternate ease-in-out;
+        /* ── SHOP HERO ── */
+        .shop-hero {
+          position: relative;
+          height: 460px;
+          overflow: hidden;
+          margin-bottom: 0;
         }
 
-        .aura-top {
-          top: -300px;
-          left: -300px;
+        .shop-hero-bg {
+          position: absolute;
+          inset: 0;
+          background: url('/trimmer.webp') center/cover no-repeat;
         }
 
-        .aura-bottom {
-          bottom: -300px;
-          right: -300px;
-          animation-delay: -5s;
+        .shop-hero-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(30,10,70,0.82) 0%, rgba(50,20,100,0.65) 40%, rgba(15,45,38,0.78) 100%);
         }
 
-        @keyframes float-aura {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(50px, 50px) scale(1.1); }
+        .shop-hero-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 0 24px 28px;
+        }
+
+        .shop-hero-card {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border: 1px solid rgba(255,255,255,0.45);
+          border-radius: 20px;
+          padding: 20px 28px;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          box-shadow: 0 16px 60px rgba(0,0,0,0.18);
+        }
+
+        .shop-hero-icon {
+          width: 66px;
+          height: 66px;
+          border-radius: 14px;
+          background: rgba(197,160,89,0.14);
+          border: 1.5px solid rgba(197,160,89,0.32);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: #775a19;
+        }
+
+        .shop-hero-main { flex: 1; min-width: 0; }
+
+        .shop-hero-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 5px;
+          flex-wrap: wrap;
+        }
+
+        .shop-hero-badge {
+          background: rgba(119,90,25,0.1);
+          color: #775a19;
+          padding: 3px 10px;
+          border-radius: 999px;
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .shop-hero-stars {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+        }
+
+        .shop-hero-rating-num {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #8a6a20;
+          margin-left: 4px;
+        }
+
+        .shop-hero-name {
+          font-family: var(--font-primary, 'Playfair Display', serif);
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #1b1c1c;
+          margin: 0 0 4px;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .shop-hero-address {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          color: #5d5f5f;
+          font-size: 0.83rem;
+          margin: 0;
+        }
+
+        .shop-hero-cta {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 10px;
+          flex-shrink: 0;
+        }
+
+        .shop-open-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 5px 12px;
+          border-radius: 999px;
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+        }
+        .shop-open-badge--open { background: rgba(34,197,94,0.1); color: #15803d; border: 1px solid rgba(34,197,94,0.25); }
+        .shop-open-badge--closed { background: rgba(239,68,68,0.08); color: #b91c1c; border: 1px solid rgba(239,68,68,0.18); }
+        .shop-open-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .shop-open-badge--open .shop-open-dot { background: #16a34a; }
+        .shop-open-badge--closed .shop-open-dot { background: #dc2626; }
+
+        .shop-hero-book-btn {
+          background: #775a19;
+          color: white;
+          border: none;
+          padding: 11px 26px;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.15s;
+          white-space: nowrap;
+        }
+        .shop-hero-book-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+        /* ── BENTO GRID ── */
+        .shop-bento-section {
+          background: #f5f3f3;
+          padding: 40px 24px 44px;
+        }
+
+        .shop-bento-grid {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          grid-template-rows: auto auto;
+          gap: 20px;
+        }
+
+        .shop-bento-card {
+          background: white;
+          border-radius: 16px;
+          padding: 28px 30px;
+          box-shadow: 0 4px 24px rgba(197,160,89,0.08);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .shop-bento-card-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        .shop-bento-card-title {
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #1b1c1c;
+          margin: 0;
+        }
+
+        /* Hours card */
+        .shop-bento-hours { grid-column: 1; }
+
+        .shop-bento-hours-list { display: flex; flex-direction: column; gap: 0; }
+
+        .shop-bento-hour-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 9px 0;
+          border-bottom: 1px solid #f5f3f3;
+        }
+        .shop-bento-hour-row:last-child { border-bottom: none; }
+
+        .shop-bento-hour-today {
+          background: rgba(197,160,89,0.07);
+          border-radius: 8px;
+          padding: 9px 10px;
+          margin: 0 -10px;
+        }
+
+        .shop-bento-hour-day {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #5d5f5f;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .shop-bento-hour-today .shop-bento-hour-day { color: #775a19; font-weight: 700; }
+
+        .shop-bento-hour-time {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #1b1c1c;
+        }
+        .shop-bento-hour-today .shop-bento-hour-time { color: #775a19; }
+
+        .shop-bento-empty-text { color: #9ca3af; font-size: 0.85rem; margin: 0; }
+
+        /* About card */
+        .shop-bento-about { grid-column: 2; display: flex; flex-direction: column; justify-content: center; }
+
+        .shop-bento-about-title {
+          font-family: var(--font-primary, 'Playfair Display', serif);
+          font-size: 1.55rem;
+          font-weight: 700;
+          color: #1b1c1c;
+          margin: 0 0 12px;
+        }
+
+        .shop-bento-about-text {
+          color: #5d5f5f;
+          font-size: 0.95rem;
+          line-height: 1.7;
+          margin: 0 0 24px;
+        }
+
+        .shop-bento-stats {
+          display: flex;
+          align-items: center;
+          gap: 28px;
+          margin-top: auto;
+        }
+
+        .shop-bento-stat-divider {
+          width: 1px;
+          height: 40px;
+          background: #e4e2e2;
+        }
+
+        .shop-bento-stat-num {
+          font-family: var(--font-primary, 'Playfair Display', serif);
+          font-size: 2.1rem;
+          font-weight: 700;
+          color: #775a19;
+          margin: 0 0 2px;
+        }
+
+        .shop-bento-stat-label {
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #9ca3af;
+          margin: 0;
+        }
+
+        /* Map card – full width, side-by-side */
+        .shop-bento-map {
+          grid-column: 1 / -1;
+          height: 340px;
+          padding: 0;
+          display: flex;
+          overflow: hidden;
+        }
+
+        .shop-map-left {
+          width: 300px;
+          flex-shrink: 0;
+          padding: 28px 28px;
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          border-right: 1px solid #f0ede6;
+        }
+
+        .shop-map-right {
+          flex: 1;
+          position: relative;
+        }
+
+        .shop-map-iframe {
+          width: 100%;
+          height: 100%;
+          border: 0;
+          display: block;
+        }
+
+        .shop-map-address-block { margin: 12px 0 16px; }
+
+        .shop-map-address-label {
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: #9ca3af;
+          margin: 0 0 4px;
+        }
+
+        .shop-map-address-text {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #1b1c1c;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .shop-map-gmaps-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #775a19;
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-decoration: none;
+          transition: gap 0.2s;
+        }
+        .shop-map-gmaps-link:hover { gap: 9px; }
+
+        @media (max-width: 900px) {
+          .shop-bento-grid { grid-template-columns: 1fr; }
+          .shop-bento-about { grid-column: 1; }
+          .shop-bento-map { height: auto; flex-direction: column; }
+          .shop-map-left { width: 100%; border-right: none; border-bottom: 1px solid #f0ede6; padding: 20px 20px; }
+          .shop-map-right { height: 260px; }
+        }
+
+        @media (max-width: 640px) {
+          .shop-hero { height: 400px; }
+          .shop-hero-card { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 18px; }
+          .shop-hero-icon { display: none; }
+          .shop-hero-cta { flex-direction: row; align-items: center; }
+          .shop-hero-name { font-size: 1.45rem; }
+          .shop-bento-section { padding: 24px 16px 32px; }
+          .shop-bento-card { padding: 20px 18px; }
         }
 
         .booking-page {
           background-color: #faf9f6;
-          background-image: 
-            radial-gradient(circle at 100% 0%, rgba(75, 0, 130, 0.04) 0%, transparent 40%),
-            radial-gradient(circle at 0% 100%, rgba(184, 134, 11, 0.02) 0%, transparent 40%);
           min-height: 100vh;
-          padding: 18px 0 120px 0;
+          padding: 0 0 120px 0;
           position: relative;
           width: 100%;
           max-width: 100%;
@@ -1447,19 +1933,7 @@ export default function ShopBookingPage() {
         }
 
         .booking-header {
-          margin-bottom: 20px;
-        }
-
-        /* 👑 HEADER */
-        .booking-title {
-          font-family: var(--font-primary, 'Playfair Display', serif);
-          font-size: 2.45rem;
-          font-weight: 700;
-          color: #4b0082;
-          margin-bottom: 8px;
-          background: linear-gradient(135deg, #4b0082 0%, #7b41b3 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+          margin: 32px 0 20px;
         }
 
         @media (max-width: 768px) {
@@ -1470,9 +1944,9 @@ export default function ShopBookingPage() {
 
         .booking-subtitle {
           color: #B8860B;
-          font-size: 0.85rem;
+          font-size: 1.05rem;
           font-weight: 700;
-          letter-spacing: 0.4em;
+          letter-spacing: 0.25em;
           margin-bottom: 6px;
         }
 

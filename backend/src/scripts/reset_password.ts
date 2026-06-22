@@ -5,8 +5,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const EMAIL = 'mymoon676@hotmail.com';
-const NEW_PASSWORD = 'BokaBarber2024!';
+const EMAIL = process.argv[2] || '';
+const NEW_PASSWORD = process.argv[3] || '';
+
+if (!EMAIL || !NEW_PASSWORD) {
+  console.error('Usage: ts-node reset_password.ts <email> <new_password>');
+  process.exit(1);
+}
 
 async function resetPassword() {
   console.log('Connecting to database...');

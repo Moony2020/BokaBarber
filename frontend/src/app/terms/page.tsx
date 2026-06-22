@@ -72,12 +72,12 @@ export default function TermsPage() {
       <style jsx>{`
         .terms-container {
           min-height: calc(100vh - 160px);
-          padding: 60px 24px;
+          padding: 20px 24px 60px;
           background: radial-gradient(circle at 10% 80%, rgba(197, 160, 89, 0.03) 0%, transparent 50%),
                       radial-gradient(circle at 90% 20%, rgba(45, 0, 77, 0.02) 0%, transparent 50%);
         }
         .terms-inner {
-          max-width: 800px;
+          max-width: 1000px;
         }
         .terms-card {
           padding: 48px 40px;

@@ -206,7 +206,12 @@ html:has(.bb-wrap) {
 
 .bb-main {
   flex: 1;
-  padding: 24px 20px 32px;
+  padding: 24px 32px 32px;
+  max-width: 1600px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ── Page header ── */
