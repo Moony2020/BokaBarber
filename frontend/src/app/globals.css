@@ -4017,6 +4017,18 @@ body:has(.public-navbar) .sok-page .sok-hero {
   }
 }
 
+@media (max-width: 640px) {
+  .login-container {
+    padding: 36px 12px 40px !important;
+    align-items: flex-start !important;
+  }
+
+  .login-card {
+    padding: 28px 20px !important;
+    max-width: 100% !important;
+  }
+}
+
 .login-card {
   width: 100%;
   max-width: 440px;
