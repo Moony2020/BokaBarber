@@ -77,8 +77,12 @@ if (!CLIENT_URL && process.env.NODE_ENV === 'production') {
   process.exit(1);
 }
 
+const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 app.use(cors({
-  origin: CLIENT_URL || 'http://localhost:3000',
+  origin: CLIENT_URL ? CLIENT_URL : (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || DEV_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -1209,11 +1213,8 @@ app.put('/api/v1/admin/:shopId/settings', authenticateUser, requireRoles('shop_a
 // Platform dashboard
 app.get('/api/v1/super/dashboard', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    // Run trial expiration detector for all shops
     const allShops = await Shop.find().lean();
-    for (const shop of allShops) {
-      await expireTrialsIfNeeded(shop._id);
-    }
+    await Promise.all(allShops.map(shop => expireTrialsIfNeeded(shop._id)));
 
     const [totalShops, activeShops, suspendedSubs, totalBookings, totalUsers] = await Promise.all([
       Shop.countDocuments(),

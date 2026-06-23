@@ -15,20 +15,28 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
     if (token) authHeaders['Authorization'] = `Bearer ${token}`;
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   const config: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers },
     credentials: 'include' as RequestCredentials,
-    cache: 'no-store'
+    cache: 'no-store',
+    signal: controller.signal,
   };
 
   if (body && method !== 'GET') {
     config.body = JSON.stringify(body);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, config);
-  const data = await res.json();
-  return { ok: res.ok, status: res.status, data };
+  try {
+    const res = await fetch(`${API_BASE}${path}`, config);
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Auth helpers
