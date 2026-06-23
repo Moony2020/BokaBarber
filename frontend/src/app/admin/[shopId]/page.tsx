@@ -403,7 +403,7 @@ export default function ShopAdminDashboard() {
             {/* BAS */}
             <div style={{ background:'#fff', border:'1.5px solid #B59F67', borderRadius:16, padding:'28px 24px 24px', display:'flex', flexDirection:'column', boxShadow:'0 10px 30px rgba(197,160,89,0.08)' }}>
               <span style={{ alignSelf:'flex-start', padding:'4px 12px', borderRadius:9999, background:'rgba(197,160,89,0.1)', color:'#775a19', fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.08em', marginBottom:16 }}>BAS</span>
-              <div style={{ fontSize:'2.8rem', fontWeight:700, color:'#775a19', lineHeight:1, marginBottom:16 }}>299 kr<span style={{ fontSize:'1rem', color:'#7f7667', fontWeight:400, marginLeft:4 }}>/mån</span></div>
+              <div style={{ fontSize:'2.8rem', fontWeight:700, color:'#775a19', lineHeight:1, marginBottom:16 }}>150 kr<span style={{ fontSize:'1rem', color:'#7f7667', fontWeight:400, marginLeft:4 }}>/mån</span></div>
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 20px', display:'flex', flexDirection:'column', gap:8, flexGrow:1 }}>
                 {['Upp till 2 anställda','Digital kalender','SMS-påminnelser'].map(f=>(
                   <li key={f} style={{ display:'flex', gap:8, color:'#4e4639', fontSize:'0.9rem' }}><span style={{ color:'#c5a059', fontWeight:700 }}>✓</span>{f}</li>
@@ -421,7 +421,7 @@ export default function ShopAdminDashboard() {
               <div style={{ position:'absolute', top:-13, right:24, background:'linear-gradient(135deg,#dfba6b,#B59F67)', color:'#fff', fontSize:'0.6rem', fontWeight:700, padding:'4px 14px', borderRadius:9999, letterSpacing:1 }}>REKOMMENDERAD</div>
               <span style={{ alignSelf:'flex-start', padding:'4px 12px', borderRadius:9999, background:'rgba(233,193,118,0.16)', color:'#775a19', fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.08em', marginBottom:16 }}>PROFESSIONAL</span>
               <div style={{ fontSize:'2.8rem', fontWeight:700, background:'linear-gradient(135deg,#d4af37,#775a19)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', lineHeight:1, marginBottom:16 }}>
-                399 kr<span style={{ fontSize:'1rem', fontWeight:400, WebkitTextFillColor:'#7f7667', color:'#7f7667', marginLeft:4 }}>/mån</span>
+                250 kr<span style={{ fontSize:'1rem', fontWeight:400, WebkitTextFillColor:'#7f7667', color:'#7f7667', marginLeft:4 }}>/mån</span>
               </div>
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 20px', display:'flex', flexDirection:'column', gap:8, flexGrow:1 }}>
                 {['Obegränsat antal anställda','Allt i Bas-planen','Avancerad lagerhantering','Ekonomisk rapportering','Prioriterad support 24/7'].map((f,i)=>(
