@@ -143,4 +143,10 @@ export const api = {
     apiFetch(`/super/shops/${shopId}/status`, { method: 'PUT', body: { action } }),
   superPlans: () => apiFetch('/super/plans'),
   superAuditLogs: () => apiFetch('/super/audit-logs'),
+  superChangePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch('/super/change-password', { method: 'PUT', body: { currentPassword, newPassword } }),
+  superUsers: () => apiFetch('/super/users'),
+  superNotifications: () => apiFetch('/super/notifications'),
+  superMarkNotificationsRead: () => apiFetch('/super/notifications/read', { method: 'PATCH' }),
+  superTrend: () => apiFetch('/super/trend'),
 };

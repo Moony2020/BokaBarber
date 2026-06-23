@@ -11,7 +11,7 @@ import jwt from 'jsonwebtoken';
 import { connectDB } from './config/db';
 import {
   User, Shop, ShopSettings, Booking, CustomerProfile,
-  Service, BarberProfile, Plan, Subscription, Review, AuditLog, Notification
+  Service, BarberProfile, Plan, Subscription, Review, AuditLog, Notification, SuperNotification
 } from './models/Schemas';
 import {
   authenticateUser, requireRoles, verifyTenantAccess,
@@ -279,6 +279,15 @@ app.post('/api/v1/auth/register-shop',
 
     await session.commitTransaction();
     session.endSession();
+
+    // Fire-and-forget super admin notification
+    SuperNotification.create({
+      type: 'new_salon',
+      title: 'Ny salong registrerad',
+      message: `${shopName} (${firstName} ${lastName}) har registrerat sig med ${selectedPlan === 'pro' ? 'Professional' : 'Bas'}-planen.`,
+      shopId: savedShop._id,
+      shopName,
+    }).catch(() => {});
 
     return res.status(201).json({
       message: 'Salong och administratörskonto har skapats framgångsrikt!',
@@ -890,7 +899,7 @@ app.get('/api/v1/admin/:shopId/dashboard', authenticateUser, requireRoles('shop_
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const [todayBookings, monthBookings, totalCustomers, activeBarbers, sub] = await Promise.all([
+    const [todayBookings, monthBookings, totalCustomers, activeBarbers, activeServices, shopSettings, sub] = await Promise.all([
       Booking.countDocuments({ shopId, startTime: { $gte: today, $lt: tomorrow } }),
       Booking.find({
         shopId,
@@ -902,14 +911,19 @@ app.get('/api/v1/admin/:shopId/dashboard', authenticateUser, requireRoles('shop_
       }).lean(),
       CustomerProfile.countDocuments({ shopId }),
       BarberProfile.countDocuments({ shopId, isActive: true }),
+      Service.countDocuments({ shopId, isActive: true }),
+      ShopSettings.findOne({ shopId }).lean(),
       Subscription.findOne({ shopId })
     ]);
 
     const monthRevenue = monthBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const hasOpeningHours = shopSettings?.openingHours?.some((oh: any) => oh.isOpen) ?? false;
 
     return res.json({
       todayBookings, monthRevenue, totalCustomers, activeBarbers,
       totalMonthBookings: monthBookings.length,
+      activeServices,
+      hasOpeningHours,
       subscription: sub ? {
         status: sub.status,
         trialEndsAt: sub.trialEndsAt,
@@ -1311,6 +1325,96 @@ app.put('/api/v1/super/shops/:shopId/status',
   }
 });
 
+// List all users (super admin)
+app.get('/api/v1/super/users', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const users = await User.find().select('-passwordHash').sort({ createdAt: -1 }).lean();
+    const enriched = await Promise.all(users.map(async (u) => {
+      let shopName = '';
+      if (u.shopId) {
+        const shop = await Shop.findById(u.shopId).lean();
+        shopName = shop?.name || '';
+      }
+      const bookingCount = u.role === 'customer'
+        ? await Booking.countDocuments({ customerId: u._id })
+        : 0;
+      return { ...u, shopName, bookingCount };
+    }));
+    return res.json({ users: enriched });
+  } catch (error) {
+    return res.status(500).json({ error: 'Kunde inte hämta användare.' });
+  }
+});
+
+// Super admin change password
+app.put('/api/v1/super/change-password', authenticateUser, requireRoles('super_admin'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Nuvarande och nytt lösenord krävs.' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Nytt lösenord måste vara minst 8 tecken.' });
+    const user = await User.findById(req.user!.id);
+    if (!user) return res.status(404).json({ error: 'Användare hittades inte.' });
+    const match = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!match) return res.status(400).json({ error: 'Nuvarande lösenord är felaktigt.' });
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    await user.save();
+    return res.json({ message: 'Lösenordet har uppdaterats.' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Kunde inte uppdatera lösenordet.' });
+  }
+});
+
+// Super notifications — list
+app.get('/api/v1/super/notifications', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const notifications = await SuperNotification.find().sort({ createdAt: -1 }).limit(50).lean();
+    const unreadCount = await SuperNotification.countDocuments({ read: false });
+    return res.json({ notifications, unreadCount });
+  } catch {
+    return res.status(500).json({ error: 'Kunde inte hämta notiser.' });
+  }
+});
+
+// Super notifications — mark all read
+app.patch('/api/v1/super/notifications/read', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    await SuperNotification.updateMany({ read: false }, { read: true });
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: 'Kunde inte markera notiser.' });
+  }
+});
+
+// Super trend stats (monthly for last 6 months)
+app.get('/api/v1/super/trend', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const now = new Date();
+    const months: { label: string; start: Date; end: Date }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const label = d.toLocaleString('sv-SE', { month: 'short' });
+      months.push({ label, start, end });
+    }
+
+    const [bookingCounts, shopCounts] = await Promise.all([
+      Promise.all(months.map(m => Booking.countDocuments({ createdAt: { $gte: m.start, $lte: m.end } }))),
+      Promise.all(months.map(m => Shop.countDocuments({ createdAt: { $gte: m.start, $lte: m.end } }))),
+    ]);
+
+    const trend = months.map((m, i) => ({
+      label: m.label,
+      bookings: bookingCounts[i],
+      newShops: shopCounts[i],
+    }));
+
+    return res.json({ trend });
+  } catch {
+    return res.status(500).json({ error: 'Kunde inte hämta trenddata.' });
+  }
+});
+
 // Get plans
 app.get('/api/v1/super/plans', authenticateUser, requireRoles('super_admin'), async (_req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1450,6 +1554,14 @@ app.post('/api/v1/billing/:shopId/verify-session', authenticateUser, async (req:
       await sub.save();
     }
     await Shop.findByIdAndUpdate(shopId, { isActive: true });
+    const paidShop = await Shop.findById(shopId).lean();
+    SuperNotification.create({
+      type: 'payment',
+      title: 'Betalning mottagen',
+      message: `${paidShop?.name || 'Okänd salong'} har aktiverat sin prenumeration (${plan}).`,
+      shopId: shopId,
+      shopName: paidShop?.name,
+    }).catch(() => {});
     return res.json({ ok: true, plan, status: 'active' });
   } catch (err) {
     console.error('Verify session error:', err);
@@ -1527,6 +1639,14 @@ app.post('/api/v1/billing/:shopId/capture-paypal-order', authenticateUser, async
       await sub.save();
     }
     await Shop.findByIdAndUpdate(shopId, { isActive: true });
+    const ppShop = await Shop.findById(shopId).lean();
+    SuperNotification.create({
+      type: 'payment',
+      title: 'Betalning mottagen (PayPal)',
+      message: `${ppShop?.name || 'Okänd salong'} har aktiverat sin prenumeration via PayPal (${plan}).`,
+      shopId: shopId,
+      shopName: ppShop?.name,
+    }).catch(() => {});
     return res.json({ ok: true, plan, status: 'active' });
   } catch (err) {
     console.error('PayPal capture error:', err);

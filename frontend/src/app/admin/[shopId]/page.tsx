@@ -10,6 +10,7 @@ import './admin-dashboard.css';
 interface DashboardStats {
   todayBookings: number; monthRevenue: number;
   totalCustomers: number; activeBarbers: number;
+  activeServices: number; hasOpeningHours: boolean;
 }
 interface BookingItem {
   _id: string; customerName: string; serviceName: string; servicePrice: number;
@@ -47,7 +48,7 @@ export default function ShopAdminDashboard() {
   const [checkoutLoading, setCheckoutLoading] = useState<'bas'|'pro'|null>(null);
   const [paypalLoading, setPaypalLoading] = useState<'bas'|'pro'|null>(null);
 
-  const [stats, setStats] = useState<DashboardStats>({ todayBookings: 0, monthRevenue: 0, totalCustomers: 0, activeBarbers: 0 });
+  const [stats, setStats] = useState<DashboardStats>({ todayBookings: 0, monthRevenue: 0, totalCustomers: 0, activeBarbers: 0, activeServices: 0, hasOpeningHours: false });
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [barbers, setBarbers] = useState<BarberItem[]>([]);
@@ -577,6 +578,42 @@ export default function ShopAdminDashboard() {
             )}
             {subscription?.status==='past_due' && <div className="bb-warn-banner">⚠️ Betalningen misslyckades. Uppdatera din betalningsmetod.</div>}
             {error && <div className="bb-error-banner">⚠️ {error}</div>}
+
+            {/* Setup checklist — only shown on overview tab when profile is incomplete */}
+            {activeTab==='oversikt' && !loading && (stats.activeBarbers===0 || stats.activeServices===0 || !stats.hasOpeningHours) && (
+              <div style={{ background:'linear-gradient(135deg,#fffbf0,#fdf6e3)', border:'1.5px solid #e8c96a', borderRadius:14, padding:'24px 28px', marginBottom:24 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:18 }}>
+                  <span style={{ fontSize:'1.8rem', lineHeight:1 }}>🚀</span>
+                  <div>
+                    <h3 style={{ margin:0, fontFamily:'Playfair Display,serif', fontSize:'1.15rem', color:'#775a19' }}>Slutför din profil för att synas online</h3>
+                    <p style={{ margin:'4px 0 0', fontSize:'0.88rem', color:'#7f6a3e', lineHeight:1.5 }}>
+                      Din salong är inte synlig för kunder ännu. Fyll i de saknade stegen nedan så aktiveras den automatiskt.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {[
+                    { done: stats.activeBarbers>0, label:'Lägg till minst en frisör', tab:'personal' as const, btn:'Gå till Personal' },
+                    { done: stats.activeServices>0, label:'Lägg till minst en tjänst (t.ex. Klippning)', tab:'tjanster' as const, btn:'Gå till Tjänster' },
+                    { done: stats.hasOpeningHours, label:'Ange öppettider (minst en dag)', tab:'installningar' as const, btn:'Gå till Inställningar' },
+                  ].map(item => (
+                    <div key={item.tab} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'white', border:`1px solid ${item.done?'#86efac':'#f0e0b0'}`, borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ fontSize:'1.1rem' }}>{item.done ? '✅' : '⭕'}</span>
+                        <span style={{ fontSize:'0.9rem', color: item.done ? '#166534' : '#4e4639', fontWeight: item.done ? 600 : 400, textDecoration: item.done ? 'line-through' : 'none' }}>
+                          {item.label}
+                        </span>
+                      </div>
+                      {!item.done && (
+                        <button onClick={()=>setActiveTab(item.tab)} style={{ background:'#c5a059', color:'white', border:'none', borderRadius:7, padding:'7px 14px', fontSize:'0.8rem', fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, marginLeft:12 }}>
+                          {item.btn} →
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {loading && <div className="bb-loading"><div className="bb-spinner" /></div>}
 

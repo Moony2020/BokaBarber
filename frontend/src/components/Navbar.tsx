@@ -160,6 +160,9 @@ export default function Navbar() {
 
   const hideMarketingLinks = isDashboard || isShopPage;
 
+  // Super admin has its own complete layout — hide the public navbar entirely
+  if (pathname?.startsWith('/super')) return null;
+
   return (
     <header ref={navbarRef} className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}${menuOpen ? ' menu-open' : ''}`}>
       <div className="container navbar-inner">

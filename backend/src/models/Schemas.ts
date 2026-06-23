@@ -435,6 +435,30 @@ const NotificationSchema = new Schema<INotification>({
 NotificationSchema.index({ shopId: 1, read: 1 });
 NotificationSchema.index({ createdAt: -1 });
 
+// ==========================================
+// 15. SUPER NOTIFICATION MODEL
+// ==========================================
+export interface ISuperNotification extends Document {
+  type: 'new_salon' | 'payment' | 'trial_expired' | 'suspended' | 'system';
+  title: string;
+  message: string;
+  shopId?: Types.ObjectId;
+  shopName?: string;
+  read: boolean;
+  createdAt: Date;
+}
+
+const SuperNotificationSchema = new Schema<ISuperNotification>({
+  type: { type: String, enum: ['new_salon','payment','trial_expired','suspended','system'], required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  shopId: { type: Schema.Types.ObjectId, ref: 'Shop' },
+  shopName: { type: String },
+  read: { type: Boolean, default: false, index: true },
+}, { timestamps: true });
+
+SuperNotificationSchema.index({ createdAt: -1 });
+
 // Expose Mongoose Models
 export const User = model<IUser>('User', UserSchema);
 export const Shop = model<IShop>('Shop', ShopSchema);
@@ -450,3 +474,4 @@ export const Review = model<IReview>('Review', ReviewSchema);
 export const Coupon = model<ICoupon>('Coupon', CouponSchema);
 export const AuditLog = model<IAuditLog>('AuditLog', AuditLogSchema);
 export const Notification = model<INotification>('Notification', NotificationSchema);
+export const SuperNotification = model<ISuperNotification>('SuperNotification', SuperNotificationSchema);
