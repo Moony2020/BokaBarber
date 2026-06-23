@@ -696,6 +696,8 @@ export default function SuperAdminPage() {
         @media(max-width:960px){
           .super-settings-grid{grid-template-columns:1fr!important}
           .info-field-grid{grid-template-columns:1fr!important}
+        }
+        @media(max-width:786px){
           .super-charts-grid{grid-template-columns:1fr!important}
           
           /* Collapsing Sidebar rules */
