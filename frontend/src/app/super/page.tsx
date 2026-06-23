@@ -265,19 +265,20 @@ export default function SuperAdminPage() {
     <div style={{ display:'flex', height:'100vh', background:BG, fontFamily:"'Inter', system-ui, sans-serif", overflow:'hidden' }}>
 
       {/* ── SIDEBAR ── */}
-      <aside style={{ width:220, background:WHITE, borderRight:`1px solid ${BORDER}`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' }}>
+      <aside className="super-sidebar" style={{ width:220, background:WHITE, borderRight:`1px solid ${BORDER}`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' }}>
         {/* Logo */}
-        <div style={{ padding:'24px 20px 20px', borderBottom:`1px solid ${BORDER}` }}>
+        <div className="super-sidebar-logo" style={{ padding:'24px 20px 20px', borderBottom:`1px solid ${BORDER}` }}>
           <div style={{ fontWeight:800, fontSize:'1.1rem', letterSpacing:'-0.02em', color:TEXT }}>
-            <span style={{ color:GOLD }}>Boka</span>Barber
+            <span style={{ color:GOLD }}>Boka</span><span className="sidebar-text">Barber</span>
           </div>
-          <div style={{ fontSize:'0.68rem', fontWeight:700, color:MUTED, letterSpacing:'0.12em', textTransform:'uppercase', marginTop:2 }}>Super Admin</div>
+          <div className="sidebar-text" style={{ fontSize:'0.68rem', fontWeight:700, color:MUTED, letterSpacing:'0.12em', textTransform:'uppercase', marginTop:2 }}>Super Admin</div>
         </div>
 
         {/* Nav */}
         <nav style={{ flex:1, padding:'12px 0' }}>
           {navItems.map(item => (
             <button key={item.key} onClick={() => setActiveTab(item.key)}
+              className="sidebar-nav-btn"
               style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'11px 20px',
                 border:'none', borderLeft: activeTab===item.key ? `3px solid ${GOLD}` : '3px solid transparent',
                 background: activeTab===item.key ? `linear-gradient(90deg,rgba(197,160,89,0.1),transparent)` : 'transparent',
@@ -285,7 +286,7 @@ export default function SuperAdminPage() {
                 fontWeight: activeTab===item.key ? 700 : 500, fontSize:'0.875rem', cursor:'pointer', textAlign:'left',
               }}>
               <span style={{ opacity: activeTab===item.key ? 1 : 0.55, flexShrink:0 }}>{item.icon}</span>
-              {item.label}
+              <span className="sidebar-text">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -295,15 +296,16 @@ export default function SuperAdminPage() {
           {adminUser && (
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
               <InitialAvatar name={`${adminUser.firstName} ${adminUser.lastName}`} size={34} color={DARK_GOLD} />
-              <div style={{ minWidth:0 }}>
+              <div className="sidebar-text" style={{ minWidth:0 }}>
                 <div style={{ fontSize:'0.82rem', fontWeight:700, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{adminUser.firstName} {adminUser.lastName}</div>
                 <div style={{ fontSize:'0.7rem', color:MUTED, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{adminUser.email}</div>
               </div>
             </div>
           )}
           <button onClick={handleLogout}
+            className="sidebar-logout-btn"
             style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'9px 12px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:TEXT2, fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
-            <IconLogout /> Logga ut
+            <IconLogout /> <span className="sidebar-text">Logga ut</span>
           </button>
         </div>
       </aside>
@@ -695,6 +697,29 @@ export default function SuperAdminPage() {
           .super-settings-grid{grid-template-columns:1fr!important}
           .info-field-grid{grid-template-columns:1fr!important}
           .super-charts-grid{grid-template-columns:1fr!important}
+          
+          /* Collapsing Sidebar rules */
+          .super-sidebar {
+            width: 74px !important;
+          }
+          .super-sidebar-logo {
+            padding: 24px 10px 20px !important;
+            text-align: center;
+          }
+          .sidebar-text {
+            display: none !important;
+          }
+          .sidebar-nav-btn {
+            justify-content: center !important;
+            padding: 12px 0 !important;
+            gap: 0 !important;
+            border-left-width: 4px !important;
+          }
+          .sidebar-logout-btn {
+            justify-content: center !important;
+            padding: 9px 0 !important;
+            gap: 0 !important;
+          }
         }
       `}</style>
     </div>
