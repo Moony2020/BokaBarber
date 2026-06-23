@@ -22,7 +22,8 @@ export default function ResetPasswordPage() {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('token');
       if (!t) {
-        setError('Ogiltig återställningslänk. Begär en ny.');
+        // Run on the next tick or use conditional state/render
+        setTimeout(() => setError('Ogiltig återställningslänk. Begär en ny.'), 0);
       } else {
         setToken(t);
       }

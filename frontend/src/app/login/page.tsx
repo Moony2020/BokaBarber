@@ -17,7 +17,7 @@ export default function LoginPage() {
       const params = new URLSearchParams(window.location.search);
       const next = params.get('next');
       if (next) {
-        setNextPath(next);
+        setTimeout(() => setNextPath(next), 0);
       }
     } catch {
       // Keep nextPath as default null

@@ -51,8 +51,10 @@ function RegisterContent() {
       .replace(/[^\w\s-]/g, '') // Ta bort konstiga tecken
       .replace(/[\s_]+/g, '-')  // Byt ut mellanslag till bindestreck
       .replace(/--+/g, '-');    // Undvik dubbla bindestreck
-    setSlug((prev) => (prev !== formatted ? formatted : prev));
-  }, [shopName]);
+    if (slug !== formatted) {
+      setTimeout(() => setSlug(formatted), 0);
+    }
+  }, [shopName, slug]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -62,24 +64,26 @@ function RegisterContent() {
     try {
       const stored = sessionStorage.getItem(successStorageKey);
       if (!stored) {
-        setHasCheckedPersistedSuccess(true);
+        setTimeout(() => setHasCheckedPersistedSuccess(true), 0);
         return;
       }
 
       const parsed = JSON.parse(stored) as PersistedRegisterSuccessState;
       if (!parsed?.successData?.shopSlug) {
-        setHasCheckedPersistedSuccess(true);
+        setTimeout(() => setHasCheckedPersistedSuccess(true), 0);
         return;
       }
 
-      setShopName(parsed.shopName || '');
-      setSlug(parsed.slug || '');
-      setSuccessData(parsed.successData);
-      setSuccess(true);
+      setTimeout(() => {
+        setShopName(parsed.shopName || '');
+        setSlug(parsed.slug || '');
+        setSuccessData(parsed.successData);
+        setSuccess(true);
+        setHasCheckedPersistedSuccess(true);
+      }, 0);
     } catch {
       // Ignorera fel vid parsning
-    } finally {
-      setHasCheckedPersistedSuccess(true);
+      setTimeout(() => setHasCheckedPersistedSuccess(true), 0);
     }
   }, []);
 

@@ -150,7 +150,9 @@ export default function SuperAdminPage() {
   };
 
   useEffect(() => {
-    loadNotifications();
+    setTimeout(() => {
+      loadNotifications();
+    }, 0);
     const iv = setInterval(loadNotifications, 30000);
     return () => clearInterval(iv);
   }, [loadNotifications]);
@@ -192,11 +194,14 @@ export default function SuperAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'oversikt') loadDashboard();
-    else if (activeTab === 'salonger') loadShops();
-    else if (activeTab === 'anvandare') loadUsers();
-    else if (activeTab === 'loggar') loadLogs();
-    else setLoading(false);
+    const run = () => {
+      if (activeTab === 'oversikt') loadDashboard();
+      else if (activeTab === 'salonger') loadShops();
+      else if (activeTab === 'anvandare') loadUsers();
+      else if (activeTab === 'loggar') loadLogs();
+      else setLoading(false);
+    };
+    setTimeout(run, 0);
   }, [activeTab, loadDashboard, loadShops, loadUsers, loadLogs]);
 
   const handleToggleShop = async (shopId: string, isActive: boolean) => {
@@ -214,7 +219,10 @@ export default function SuperAdminPage() {
     try {
       const res = await api.superChangePassword(currentPw, newPw);
       if (res.ok) { showToast('Lösenordet uppdaterades!'); setCurrentPw(''); setNewPw(''); setConfirmPw(''); }
-      else showToast((res.data as any).error || 'Misslyckades.', false);
+      else {
+        const errData = res.data as { error?: string };
+        showToast(errData.error || 'Misslyckades.', false);
+      }
     } catch { showToast('Nätverksfel.', false); }
     finally { setPwLoading(false); }
   };
@@ -400,19 +408,19 @@ export default function SuperAdminPage() {
                   {/* KPI row */}
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:16, marginBottom:28 }}>
                     {[
-                      { icon:<IconMoney/>, label:'Månadsintäkter', sub:'Aktiva prenumerationer', val:`${stats.mrr.toLocaleString('sv-SE')} SEK`, accent:true },
-                      { icon:<IconCheck/>, label:'Aktiva salonger', sub:'Betald eller provperiod', val:String(stats.activeShops) },
-                      { icon:<IconShop/>, label:'Totala salonger', sub:'Registrerade på plattformen', val:String(stats.totalShops) },
-                      { icon:<IconUsers/>, label:'Totala användare', sub:'Kunder, admins & frisörer', val:String(stats.totalUsers) },
-                      { icon:<IconCalendar/>, label:'Totala bokningar', sub:'Alla bokningar nogonsin', val:String(stats.totalBookings) },
-                      { icon:<IconWarn/>, label:'Behöver åtgärd', sub:'Suspenderade salonger', val:String(stats.suspendedSubs), danger:stats.suspendedSubs>0 },
+                      { icon:<IconMoney/>, label:'Månadsintäkter', sub:'Aktiva prenumerationer', val:`${stats.mrr.toLocaleString('sv-SE')} SEK`, accent:true, danger:false },
+                      { icon:<IconCheck/>, label:'Aktiva salonger', sub:'Betald eller provperiod', val:String(stats.activeShops), accent:false, danger:false },
+                      { icon:<IconShop/>, label:'Totala salonger', sub:'Registrerade på plattformen', val:String(stats.totalShops), accent:false, danger:false },
+                      { icon:<IconUsers/>, label:'Totala användare', sub:'Kunder, admins & frisörer', val:String(stats.totalUsers), accent:false, danger:false },
+                      { icon:<IconCalendar/>, label:'Totala bokningar', sub:'Alla bokningar nogonsin', val:String(stats.totalBookings), accent:false, danger:false },
+                      { icon:<IconWarn/>, label:'Behöver åtgärd', sub:'Suspenderade salonger', val:String(stats.suspendedSubs), accent:false, danger:stats.suspendedSubs>0 },
                     ].map((k,i) => (
                       <div key={i} style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'20px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-                          <span style={{ color: k.accent ? GOLD : (k as any).danger ? '#dc2626' : MUTED }}>{k.icon}</span>
+                          <span style={{ color: k.accent ? GOLD : k.danger ? '#dc2626' : MUTED }}>{k.icon}</span>
                           <span style={{ fontSize:'0.7rem', fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.07em' }}>{k.label}</span>
                         </div>
-                        <div style={{ fontSize:'2rem', fontWeight:800, color: (k as any).danger ? '#dc2626' : k.accent ? GOLD : TEXT, letterSpacing:'-0.02em', lineHeight:1, marginBottom:6 }}>{k.val}</div>
+                        <div style={{ fontSize:'2rem', fontWeight:800, color: k.danger ? '#dc2626' : k.accent ? GOLD : TEXT, letterSpacing:'-0.02em', lineHeight:1, marginBottom:6 }}>{k.val}</div>
                         <div style={{ fontSize:'0.75rem', color:MUTED }}>{k.sub}</div>
                       </div>
                     ))}
@@ -472,13 +480,13 @@ export default function SuperAdminPage() {
                   {/* Stats */}
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:24 }}>
                     {[
-                      { label:'TOTALT ANTAL SALONGER', val:stats.totalShops, sub:'Registrerade på plattformen' },
-                      { label:'AKTIVA SALONGER', val:stats.activeShops, sub:'Trial eller aktiv prenumeration' },
+                      { label:'TOTALT ANTAL SALONGER', val:stats.totalShops, sub:'Registrerade på plattformen', danger:false },
+                      { label:'AKTIVA SALONGER', val:stats.activeShops, sub:'Trial eller aktiv prenumeration', danger:false },
                       { label:'BEHÖVER ÅTGÄRD', val:stats.suspendedSubs, sub:'Suspenderade', danger:stats.suspendedSubs>0 },
                     ].map((s,i) => (
                       <div key={i} style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:12, padding:'20px 22px' }}>
                         <div style={{ fontSize:'0.7rem', fontWeight:700, color:MUTED, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:8 }}>{s.label}</div>
-                        <div style={{ fontSize:'2.2rem', fontWeight:800, color:(s as any).danger?'#dc2626':TEXT, letterSpacing:'-0.02em', lineHeight:1, marginBottom:4 }}>{s.val}</div>
+                        <div style={{ fontSize:'2.2rem', fontWeight:800, color: s.danger ? '#dc2626' : TEXT, letterSpacing:'-0.02em', lineHeight:1, marginBottom:4 }}>{s.val}</div>
                         <div style={{ fontSize:'0.75rem', color:MUTED }}>{s.sub}</div>
                       </div>
                     ))}
