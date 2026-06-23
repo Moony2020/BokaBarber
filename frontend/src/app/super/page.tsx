@@ -294,9 +294,9 @@ export default function SuperAdminPage() {
         </nav>
 
         {/* User + Logout */}
-        <div style={{ borderTop:`1px solid ${BORDER}`, padding:'16px 20px' }}>
+        <div className="sidebar-bottom" style={{ borderTop:`1px solid ${BORDER}`, padding:'16px 20px' }}>
           {adminUser && (
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+            <div className="sidebar-user-container" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
               <InitialAvatar name={`${adminUser.firstName} ${adminUser.lastName}`} size={34} color={DARK_GOLD} />
               <div className="sidebar-text" style={{ minWidth:0 }}>
                 <div style={{ fontSize:'0.82rem', fontWeight:700, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{adminUser.firstName} {adminUser.lastName}</div>
@@ -307,7 +307,8 @@ export default function SuperAdminPage() {
           <button onClick={handleLogout}
             className="sidebar-logout-btn"
             style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'9px 12px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:TEXT2, fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
-            <IconLogout /> <span className="sidebar-text">Logga ut</span>
+            <span className="sidebar-logout-icon" style={{ display: 'flex', flexShrink: 0 }}><IconLogout /></span> 
+            <span className="sidebar-text">Logga ut</span>
           </button>
         </div>
       </aside>
@@ -718,10 +719,19 @@ export default function SuperAdminPage() {
             gap: 0 !important;
             border-left-width: 4px !important;
           }
+          .sidebar-bottom {
+            padding: 16px 0 !important;
+          }
+          .sidebar-user-container {
+            justify-content: center !important;
+            margin-bottom: 16px !important;
+          }
           .sidebar-logout-btn {
             justify-content: center !important;
-            padding: 9px 0 !important;
+            padding: 8px 0 !important;
             gap: 0 !important;
+            border: none !important;
+            width: auto !important;
           }
         }
         @media(max-width:768px){
