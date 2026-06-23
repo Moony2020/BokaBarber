@@ -367,7 +367,7 @@ export default function SuperAdminPage() {
             </div>
             {/* User chip */}
             {adminUser && (
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div className="topbar-user-chip" style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <div className="topbar-user-text" style={{ textAlign:'right' }}>
                   <div style={{ fontSize:'0.82rem', fontWeight:700, color:TEXT, whiteSpace:'nowrap' }}>{adminUser.firstName} {adminUser.lastName}</div>
                   <div style={{ fontSize:'0.7rem', color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>Super Admin</div>
@@ -731,8 +731,8 @@ export default function SuperAdminPage() {
           /* Stats cards stack vertically on small devices */
           .super-stats-grid{grid-template-columns:1fr!important}
           
-          /* Hide user detail texts to allow full width for search input */
-          .topbar-user-text {
+          /* Hide user chip entirely on small screens since it's in sidebar */
+          .topbar-user-chip {
             display: none !important;
           }
         }

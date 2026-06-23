@@ -120,8 +120,10 @@ export default function Footer() {
           </div>
           <div className="dashboard-footer-right">
             <span>&copy; {new Date().getFullYear()} BokaBarber AB. Skandinavisk Lyx.</span>
-            <Link href="/privacy" className="dashboard-legal-link">Integritet</Link>
-            <Link href="/terms" className="dashboard-legal-link">Villkor</Link>
+            <div className="dashboard-footer-links">
+              <Link href="/privacy" className="dashboard-legal-link">Integritet</Link>
+              <Link href="/terms" className="dashboard-legal-link">Villkor</Link>
+            </div>
           </div>
         </div>
       )}
@@ -357,12 +359,25 @@ export default function Footer() {
         @media (max-width: 600px) {
           .dashboard-footer-content {
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             text-align: center;
+          }
+          .dashboard-footer-right {
+            flex-direction: column;
+            gap: 10px;
+          }
+          .dashboard-footer-links {
+            justify-content: center;
           }
         }
 
         .dashboard-footer-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .dashboard-footer-links {
           display: flex;
           align-items: center;
           gap: 16px;
