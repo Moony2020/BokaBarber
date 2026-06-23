@@ -78,14 +78,25 @@ if (!CLIENT_URL && process.env.NODE_ENV === 'production') {
 }
 
 const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+// Build an allowed-origins list from the CLIENT_URL env var (supports comma-separated URLs)
+// plus always include local dev origins.
+const ALLOWED_ORIGINS: string[] = [
+  ...DEV_ORIGINS,
+  'https://bokabarber.netlify.app',
+  ...(CLIENT_URL ? CLIENT_URL.split(',').map((u: string) => u.trim()).filter(Boolean) : []),
+];
+
 app.use(cors({
-  origin: CLIENT_URL ? CLIENT_URL : (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin || DEV_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
+  origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (e.g. curl, Postman, server-to-server)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 }));
 
 // Global Helmet Protection

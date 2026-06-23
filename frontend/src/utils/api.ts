@@ -21,7 +21,7 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
   const config: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers },
-    credentials: 'include' as RequestCredentials,
+    // No credentials:'include' needed – auth uses Bearer token in the Authorization header
     cache: 'no-store',
     signal: controller.signal,
   };
