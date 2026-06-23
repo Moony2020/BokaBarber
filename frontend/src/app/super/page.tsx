@@ -428,7 +428,7 @@ export default function SuperAdminPage() {
 
                   {/* Charts row */}
                   {trend.length > 0 && (
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20 }}>
+                    <div className="super-charts-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20 }}>
                       <div style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'22px 24px' }}>
                         <div style={{ fontSize:'0.78rem', fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:4 }}>Bokningar per månad</div>
                         <div style={{ fontSize:'1.5rem', fontWeight:800, color:TEXT, marginBottom:16 }}>
@@ -694,6 +694,7 @@ export default function SuperAdminPage() {
         @media(max-width:960px){
           .super-settings-grid{grid-template-columns:1fr!important}
           .info-field-grid{grid-template-columns:1fr!important}
+          .super-charts-grid{grid-template-columns:1fr!important}
         }
       `}</style>
     </div>
