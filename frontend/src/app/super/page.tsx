@@ -696,11 +696,8 @@ export default function SuperAdminPage() {
         @media(max-width:960px){
           .super-settings-grid{grid-template-columns:1fr!important}
           .info-field-grid{grid-template-columns:1fr!important}
-        }
-        @media(max-width:786px){
-          .super-charts-grid{grid-template-columns:1fr!important}
           
-          /* Collapsing Sidebar rules */
+          /* Collapsing Sidebar rules at 960px */
           .super-sidebar {
             width: 74px !important;
           }
@@ -722,6 +719,10 @@ export default function SuperAdminPage() {
             padding: 9px 0 !important;
             gap: 0 !important;
           }
+        }
+        @media(max-width:768px){
+          /* Charts stack vertically only at 768px and below */
+          .super-charts-grid{grid-template-columns:1fr!important}
         }
       `}</style>
     </div>
