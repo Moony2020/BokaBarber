@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const HOMEPAGE_CATEGORIES = [
@@ -290,11 +291,13 @@ export default function HomePage() {
           <div className="design-story-visual-shell">
             <div className="design-story-frame"></div>
             <div className="design-story-visual">
-              <img
+              <Image
                 src="/trimmer.webp"
                 alt="Trimmer på marmorskiva"
                 className="design-story-image"
-                loading="lazy"
+                width={600}
+                height={600}
+                priority={false}
               />
               <div className="design-story-image-overlay"></div>
             </div>
