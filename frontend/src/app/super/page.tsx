@@ -731,7 +731,7 @@ export default function SuperAdminPage() {
             padding: 8px 0 !important;
             gap: 0 !important;
             border: none !important;
-            width: auto !important;
+            width: 100% !important;
           }
         }
         @media(max-width:768px){
