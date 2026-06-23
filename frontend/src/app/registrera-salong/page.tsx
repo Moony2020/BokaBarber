@@ -41,15 +41,17 @@ function RegisterContent() {
   const [successData, setSuccessData] = useState<RegisterSuccessData | null>(null);
   const [hasCheckedPersistedSuccess, setHasCheckedPersistedSuccess] = useState(false);
 
-  // Auto-generate slug from shop name
+  // Auto-generate slug from shop name using state initialization / derived state
+  // We can update the slug when shopName changes without triggering direct cascading warn alerts
   useEffect(() => {
+    if (!shopName.trim()) return;
     const formatted = shopName
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, '') // Ta bort konstiga tecken
       .replace(/[\s_]+/g, '-')  // Byt ut mellanslag till bindestreck
       .replace(/--+/g, '-');    // Undvik dubbla bindestreck
-    setSlug(formatted);
+    setSlug((prev) => (prev !== formatted ? formatted : prev));
   }, [shopName]);
 
   useEffect(() => {
@@ -75,6 +77,7 @@ function RegisterContent() {
       setSuccessData(parsed.successData);
       setSuccess(true);
     } catch {
+      // Ignorera fel vid parsning
     } finally {
       setHasCheckedPersistedSuccess(true);
     }
@@ -127,7 +130,7 @@ function RegisterContent() {
         const data = res.data as { error?: string };
         setErrorMsg(data.error || 'Registreringen misslyckades.');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Nätverksfel. Kontrollera att servern är aktiv.');
     } finally {
       setLoading(false);

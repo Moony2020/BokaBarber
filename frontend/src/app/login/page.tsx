@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/utils/api';
 
@@ -12,15 +11,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [nextPath, setNextPath] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const next = params.get('next');
-      setNextPath(next);
+      if (next) {
+        setNextPath(next);
+      }
     } catch {
-      setNextPath(null);
+      // Keep nextPath as default null
     }
   }, []);
 

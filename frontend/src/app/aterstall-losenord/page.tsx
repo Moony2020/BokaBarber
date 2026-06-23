@@ -18,11 +18,16 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const t = params.get('token');
-    if (!t) setError('Ogiltig återställningslänk. Begär en ny.');
-    else setToken(t);
-    setPageReady(true);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('token');
+      if (!t) {
+        setError('Ogiltig återställningslänk. Begär en ny.');
+      } else {
+        setToken(t);
+      }
+      setPageReady(true);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
