@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { api } from '@/utils/api';
 
 interface PlatformStats {
@@ -267,9 +268,10 @@ export default function SuperAdminPage() {
       {/* ── SIDEBAR ── */}
       <aside className="super-sidebar" style={{ width:220, background:WHITE, borderRight:`1px solid ${BORDER}`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' }}>
         {/* Logo */}
-        <div className="super-sidebar-logo" style={{ padding:'24px 20px 20px', borderBottom:`1px solid ${BORDER}` }}>
-          <div style={{ fontWeight:800, fontSize:'1.1rem', letterSpacing:'-0.02em', color:TEXT }}>
-            <span style={{ color:GOLD }}>Boka</span><span className="sidebar-text">Barber</span>
+        <div className="super-sidebar-logo" style={{ padding:'16px 20px', borderBottom:`1px solid ${BORDER}`, display:'flex', flexDirection:'column', alignItems:'center' }}>
+          <div style={{ fontWeight:800, fontSize:'1.1rem', letterSpacing:'-0.02em', color:TEXT, display:'flex', alignItems:'center', gap:8, width:'100%', justifyContent:'center' }}>
+            <Image unoptimized src="/brand-logo.png" alt="BokaBarber logo" width={32} height={32} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+            <span className="sidebar-text" style={{ color:GOLD }}>Boka</span><span className="sidebar-text">Barber</span>
           </div>
           <div className="sidebar-text" style={{ fontSize:'0.68rem', fontWeight:700, color:MUTED, letterSpacing:'0.12em', textTransform:'uppercase', marginTop:2 }}>Super Admin</div>
         </div>
@@ -314,9 +316,9 @@ export default function SuperAdminPage() {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
         {/* Top bar */}
-        <div style={{ background:WHITE, borderBottom:`1px solid ${BORDER}`, padding:'0 28px', height:64, display:'flex', alignItems:'center', gap:16, flexShrink:0 }}>
+        <div style={{ background:WHITE, borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:64, display:'flex', alignItems:'center', gap:16, flexShrink:0, justifyContent:'space-between' }}>
           {/* Search */}
-          <div style={{ flex:1, maxWidth:400, position:'relative' }}>
+          <div className="topbar-search-wrapper" style={{ flex:1, maxWidth:400, position:'relative', minWidth:140 }}>
             <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:MUTED, pointerEvents:'none' }}><IconSearch /></span>
             <input
               value={searchQ} onChange={e => setSearchQ(e.target.value)}
@@ -324,54 +326,56 @@ export default function SuperAdminPage() {
               style={{ width:'100%', padding:'9px 14px 9px 38px', border:`1px solid ${BORDER}`, borderRadius:9, fontSize:'0.85rem', outline:'none', background:'#faf9f6', boxSizing:'border-box' }}
             />
           </div>
-          <div style={{ flex:1 }} />
-          {/* Notifications bell */}
-          <div ref={notifRef} style={{ position:'relative' }}>
-            <button onClick={handleOpenNotifs}
-              style={{ width:38, height:38, borderRadius:9, border:`1px solid ${BORDER}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:TEXT2, position:'relative' }}>
-              <IconBell />
-              {unreadCount > 0 && (
-                <span style={{ position:'absolute', top:-5, right:-5, background:'#dc2626', color:'white', borderRadius:'50%', minWidth:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:800, padding:'0 3px', border:'2px solid white', lineHeight:1 }}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
-            {notifOpen && (
-              <div style={{ position:'absolute', top:46, right:0, width:360, background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:'0 8px 32px rgba(0,0,0,0.14)', zIndex:1000, overflow:'hidden' }}>
-                <div style={{ padding:'16px 18px 12px', borderBottom:`1px solid ${BORDER}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontWeight:700, fontSize:'0.95rem', color:TEXT }}>Notifikationer</span>
-                  <button onClick={()=>setNotifOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:'1.1rem', lineHeight:1 }}>✕</button>
-                </div>
-                <div style={{ maxHeight:400, overflowY:'auto' }}>
-                  {notifs.length === 0 ? (
-                    <div style={{ padding:'32px 18px', textAlign:'center', color:MUTED, fontSize:'0.85rem' }}>Inga notifikationer ännu</div>
-                  ) : notifs.map(n => (
-                    <div key={n._id} style={{ padding:'14px 18px', borderBottom:`1px solid #f5f3ef`, background: n.read ? WHITE : '#fffbf2', display:'flex', gap:12, alignItems:'flex-start' }}>
-                      <span style={{ fontSize:'1.2rem', flexShrink:0 }}>
-                        {n.type==='new_salon' ? '🏪' : n.type==='payment' ? '💳' : n.type==='trial_expired' ? '⏰' : n.type==='suspended' ? '🔴' : 'ℹ️'}
-                      </span>
-                      <div style={{ minWidth:0 }}>
-                        <div style={{ fontWeight:700, fontSize:'0.83rem', color:TEXT, marginBottom:2 }}>{n.title}</div>
-                        <div style={{ fontSize:'0.78rem', color:TEXT2, lineHeight:1.4 }}>{n.message}</div>
-                        <div style={{ fontSize:'0.72rem', color:MUTED, marginTop:4 }}>{new Date(n.createdAt).toLocaleString('sv-SE')}</div>
+          
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            {/* Notifications bell */}
+            <div ref={notifRef} style={{ position:'relative' }}>
+              <button onClick={handleOpenNotifs}
+                style={{ width:38, height:38, borderRadius:9, border:`1px solid ${BORDER}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:TEXT2, position:'relative' }}>
+                <IconBell />
+                {unreadCount > 0 && (
+                  <span style={{ position:'absolute', top:-5, right:-5, background:'#dc2626', color:'white', borderRadius:'50%', minWidth:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:800, padding:'0 3px', border:'2px solid white', lineHeight:1 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <div style={{ position:'absolute', top:46, right:0, width:360, background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:'0 8px 32px rgba(0,0,0,0.14)', zIndex:1000, overflow:'hidden' }}>
+                  <div style={{ padding:'16px 18px 12px', borderBottom:`1px solid ${BORDER}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontWeight:700, fontSize:'0.95rem', color:TEXT }}>Notifikationer</span>
+                    <button onClick={()=>setNotifOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:'1.1rem', lineHeight:1 }}>✕</button>
+                  </div>
+                  <div style={{ maxHeight:400, overflowY:'auto' }}>
+                    {notifs.length === 0 ? (
+                      <div style={{ padding:'32px 18px', textAlign:'center', color:MUTED, fontSize:'0.85rem' }}>Inga notifikationer ännu</div>
+                    ) : notifs.map(n => (
+                      <div key={n._id} style={{ padding:'14px 18px', borderBottom:`1px solid #f5f3ef`, background: n.read ? WHITE : '#fffbf2', display:'flex', gap:12, alignItems:'flex-start' }}>
+                        <span style={{ fontSize:'1.2rem', flexShrink:0 }}>
+                          {n.type==='new_salon' ? '🏪' : n.type==='payment' ? '💳' : n.type==='trial_expired' ? '⏰' : n.type==='suspended' ? '🔴' : 'ℹ️'}
+                        </span>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:'0.83rem', color:TEXT, marginBottom:2 }}>{n.title}</div>
+                          <div style={{ fontSize:'0.78rem', color:TEXT2, lineHeight:1.4 }}>{n.message}</div>
+                          <div style={{ fontSize:'0.72rem', color:MUTED, marginTop:4 }}>{new Date(n.createdAt).toLocaleString('sv-SE')}</div>
+                        </div>
+                        {!n.read && <div style={{ width:7, height:7, borderRadius:'50%', background:'#dc2626', flexShrink:0, marginTop:4 }}/>}
                       </div>
-                      {!n.read && <div style={{ width:7, height:7, borderRadius:'50%', background:'#dc2626', flexShrink:0, marginTop:4 }}/>}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
+            {/* User chip */}
+            {adminUser && (
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div className="topbar-user-text" style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:'0.82rem', fontWeight:700, color:TEXT, whiteSpace:'nowrap' }}>{adminUser.firstName} {adminUser.lastName}</div>
+                  <div style={{ fontSize:'0.7rem', color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>Super Admin</div>
+                </div>
+                <InitialAvatar name={`${adminUser.firstName} ${adminUser.lastName}`} size={36} color={DARK_GOLD} />
               </div>
             )}
           </div>
-          {/* User chip */}
-          {adminUser && (
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:'0.82rem', fontWeight:700, color:TEXT }}>{adminUser.firstName} {adminUser.lastName}</div>
-                <div style={{ fontSize:'0.7rem', color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>Super Admin</div>
-              </div>
-              <InitialAvatar name={`${adminUser.firstName} ${adminUser.lastName}`} size={36} color={DARK_GOLD} />
-            </div>
-          )}
         </div>
 
         {/* Toast */}
@@ -702,7 +706,7 @@ export default function SuperAdminPage() {
             width: 74px !important;
           }
           .super-sidebar-logo {
-            padding: 24px 10px 20px !important;
+            padding: 16px 0 !important;
             text-align: center;
           }
           .sidebar-text {
@@ -723,6 +727,11 @@ export default function SuperAdminPage() {
         @media(max-width:768px){
           /* Charts stack vertically only at 768px and below */
           .super-charts-grid{grid-template-columns:1fr!important}
+          
+          /* Hide user detail texts to allow full width for search input */
+          .topbar-user-text {
+            display: none !important;
+          }
         }
       `}</style>
     </div>
