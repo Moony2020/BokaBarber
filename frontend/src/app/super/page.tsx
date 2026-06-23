@@ -412,7 +412,7 @@ export default function SuperAdminPage() {
               {activeTab==='oversikt' && (
                 <div>
                   {/* KPI row */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:16, marginBottom:28 }}>
+                  <div className="super-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:16, marginBottom:28 }}>
                     {[
                       { icon:<IconMoney/>, label:'Månadsintäkter', sub:'Aktiva prenumerationer', val:`${stats.mrr.toLocaleString('sv-SE')} SEK`, accent:true, danger:false },
                       { icon:<IconCheck/>, label:'Aktiva salonger', sub:'Betald eller provperiod', val:String(stats.activeShops), accent:false, danger:false },
@@ -484,7 +484,7 @@ export default function SuperAdminPage() {
               {activeTab==='salonger' && (
                 <div>
                   {/* Stats */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:24 }}>
+                  <div className="super-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:24 }}>
                     {[
                       { label:'TOTALT ANTAL SALONGER', val:stats.totalShops, sub:'Registrerade på plattformen', danger:false },
                       { label:'AKTIVA SALONGER', val:stats.activeShops, sub:'Trial eller aktiv prenumeration', danger:false },
@@ -552,7 +552,7 @@ export default function SuperAdminPage() {
               {activeTab==='anvandare' && (
                 <div>
                   {/* Stats */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+                  <div className="super-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
                     {[
                       { label:'TOTALA ANVÄNDARE', val:users.length },
                       { label:'SUPER ADMINS', val:users.filter(u=>u.role==='super_admin').length, sub:'Fullständiga rättigheter' },
@@ -728,10 +728,18 @@ export default function SuperAdminPage() {
           /* Charts stack vertically only at 768px and below */
           .super-charts-grid{grid-template-columns:1fr!important}
           
+          /* Stats cards stack vertically on small devices */
+          .super-stats-grid{grid-template-columns:1fr!important}
+          
           /* Hide user detail texts to allow full width for search input */
           .topbar-user-text {
             display: none !important;
           }
+        }
+      `}</style>
+      <style global jsx>{`
+        body {
+          min-width: 360px !important;
         }
       `}</style>
     </div>
