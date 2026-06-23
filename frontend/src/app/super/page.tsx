@@ -316,7 +316,7 @@ export default function SuperAdminPage() {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
         {/* Top bar */}
-        <div style={{ background:WHITE, borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:64, display:'flex', alignItems:'center', gap:16, flexShrink:0, justifyContent:'space-between' }}>
+        <div className="super-topbar" style={{ background:WHITE, borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:64, display:'flex', alignItems:'center', gap:16, flexShrink:0, justifyContent:'space-between' }}>
           {/* Search */}
           <div className="topbar-search-wrapper" style={{ flex:1, maxWidth:400, position:'relative', minWidth:140 }}>
             <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:MUTED, pointerEvents:'none' }}><IconSearch /></span>
@@ -386,7 +386,7 @@ export default function SuperAdminPage() {
         )}
 
         {/* Content */}
-        <div style={{ flex:1, overflowY:'auto', padding:'28px 16px' }}>
+        <div className="super-content" style={{ flex:1, overflowY:'auto', padding:'28px 16px' }}>
           {/* Page header */}
           <div style={{ marginBottom:28 }}>
             <h1 style={{ margin:0, fontSize:'1.6rem', fontWeight:800, color:TEXT, letterSpacing:'-0.02em' }}>{tabTitle}</h1>
@@ -632,7 +632,7 @@ export default function SuperAdminPage() {
               {activeTab==='installningar' && (
                 <div className="super-settings-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, alignItems:'start' }}>
                   <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                    <div style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
+                    <div className="super-card" style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
                       <h2 style={{ margin:'0 0 20px', fontSize:'1.05rem', fontWeight:700, color:TEXT }}>👤 Kontoinformation</h2>
                       <div className="info-field-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                         {[{label:'Förnamn',val:adminUser?.firstName||'—'},{label:'Efternamn',val:adminUser?.lastName||'—'}].map(f=>(
@@ -651,10 +651,10 @@ export default function SuperAdminPage() {
                         ))}
                       </div>
                     </div>
-                    <div style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
+                    <div className="super-card" style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
                       <h2 style={{ margin:'0 0 16px', fontSize:'1.05rem', fontWeight:700, color:TEXT }}>ℹ️ Systeminformation</h2>
                       {[{l:'Plattform',v:'BokaBarber SaaS'},{l:'Version',v:'v1.0'},{l:'Support',v:'support@bokabarber.se'}].map(f=>(
-                        <div key={f.l} style={{ display:'flex', justifyContent:'space-between', padding:'10px 14px', background:BG, borderRadius:8, marginBottom:8 }}>
+                        <div key={f.l} style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'10px 14px', background:BG, borderRadius:8, marginBottom:8 }}>
                           <span style={{ fontSize:'0.82rem', color:MUTED, fontWeight:600 }}>{f.l}</span>
                           <span style={{ fontSize:'0.82rem', color:TEXT }}>{f.v}</span>
                         </div>
@@ -663,7 +663,7 @@ export default function SuperAdminPage() {
                   </div>
 
                   {/* Password */}
-                  <div style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
+                  <div className="super-card" style={{ background:WHITE, border:`1px solid ${BORDER}`, borderRadius:14, padding:'24px' }}>
                     <h2 style={{ margin:'0 0 6px', fontSize:'1.05rem', fontWeight:700, color:TEXT }}>🔒 Byt lösenord</h2>
                     <p style={{ margin:'0 0 22px', fontSize:'0.82rem', color:MUTED }}>Minst 8 tecken. Loggas ut från alla sessioner.</p>
                     <form onSubmit={handleChangePassword} style={{ display:'flex', flexDirection:'column', gap:16 }}>
@@ -734,6 +734,24 @@ export default function SuperAdminPage() {
           /* Hide user chip entirely on small screens since it's in sidebar */
           .topbar-user-chip {
             display: none !important;
+          }
+
+          /* Reduce padding and sidebar to prevent horizontal scroll on small devices (e.g. 320px) */
+          .super-sidebar {
+            width: 60px !important;
+          }
+          .super-sidebar-logo {
+            padding: 12px 0 !important;
+          }
+          .super-topbar {
+            padding: 0 12px !important;
+            gap: 12px !important;
+          }
+          .super-content {
+            padding: 20px 12px !important;
+          }
+          .super-card {
+            padding: 16px !important;
           }
         }
       `}</style>
