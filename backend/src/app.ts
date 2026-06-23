@@ -1352,7 +1352,7 @@ app.put('/api/v1/super/change-password', authenticateUser, requireRoles('super_a
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Nuvarande och nytt lösenord krävs.' });
     if (newPassword.length < 8) return res.status(400).json({ error: 'Nytt lösenord måste vara minst 8 tecken.' });
-    const user = await User.findById(req.user!.id);
+    const user = await User.findById(req.user!.userId);
     if (!user) return res.status(404).json({ error: 'Användare hittades inte.' });
     const match = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!match) return res.status(400).json({ error: 'Nuvarande lösenord är felaktigt.' });
