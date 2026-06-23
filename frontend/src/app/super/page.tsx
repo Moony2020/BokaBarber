@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
@@ -32,7 +30,7 @@ interface SuperNotif {
   _id: string; type: string; title: string; message: string;
   shopName?: string; read: boolean; createdAt: string;
 }
-interface TrendPoint { label: string; bookings: number; newShops: number; }
+interface TrendPoint { label: string; bookings: number; newShops: number; [key: string]: string | number; }
 
 type Tab = 'oversikt' | 'salonger' | 'anvandare' | 'loggar' | 'installningar';
 
@@ -318,7 +316,7 @@ export default function SuperAdminPage() {
           </div>
           <div style={{ flex:1 }} />
           {/* Notifications bell */}
-          <div style={{ position:'relative' }}>
+          <div ref={notifRef} style={{ position:'relative' }}>
             <button onClick={handleOpenNotifs}
               style={{ width:38, height:38, borderRadius:9, border:`1px solid ${BORDER}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:TEXT2, position:'relative' }}>
               <IconBell />
@@ -630,11 +628,11 @@ export default function SuperAdminPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="info-field-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                      <div className="info-field-grid" style={{ display:'grid', gridTemplateColumns:'1fr', gap:12 }}>
                         {[{label:'E-postadress',val:adminUser?.email||'—'},{label:'Roll',val:'Super Admin'}].map(f=>(
                           <div key={f.label} style={{ background:BG, borderRadius:10, padding:'12px 14px' }}>
                             <div style={{ fontSize:'0.7rem', fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>{f.label}</div>
-                            <div style={{ fontSize:'0.88rem', fontWeight:600, color:TEXT, wordBreak:'break-all' }}>{f.val}</div>
+                            <div style={{ fontSize:'0.95rem', fontWeight:600, color:TEXT }}>{f.val}</div>
                           </div>
                         ))}
                       </div>
