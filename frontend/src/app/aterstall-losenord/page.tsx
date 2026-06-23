@@ -21,13 +21,14 @@ export default function ResetPasswordPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('token');
-      if (!t) {
-        // Run on the next tick or use conditional state/render
-        setTimeout(() => setError('Ogiltig återställningslänk. Begär en ny.'), 0);
-      } else {
-        setToken(t);
-      }
-      setPageReady(true);
+      setTimeout(() => {
+        if (!t) {
+          setError('Ogiltig återställningslänk. Begär en ny.');
+        } else {
+          setToken(t);
+        }
+        setPageReady(true);
+      }, 0);
     }
   }, []);
 
