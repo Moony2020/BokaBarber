@@ -488,15 +488,15 @@ section[id] {
   -webkit-backdrop-filter: none !important;
   z-index: 1000 !important;
   transition: all var(--transition-normal) !important;
-  --logo-icon-size: 28px !important; /* Elegant scaled logo icon on public pages */
+  --logo-icon-size: 24px !important; /* Elegant scaled logo icon on public pages */
 }
 
 .public-navbar .navbar-inner {
   position: relative !important; /* Context for absolute positioning of mobile-nav-panel child */
-  background: rgba(255, 255, 255, 0.9) !important;
-  background-color: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  background-color: rgba(255, 255, 255, 0.96) !important;
   background-image: none !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  border: none !important;
   border-radius: 9999px !important;
   box-shadow: 0 8px 22px rgba(45, 0, 77, 0.08), 0 10px 18px -14px rgba(28, 27, 31, 0.28) !important;
   backdrop-filter: blur(10px) saturate(140%) !important;
@@ -504,7 +504,7 @@ section[id] {
   max-width: min(var(--container-max-width), calc(100vw - 40px)) !important;
   margin: 0 auto !important;
   padding: 0 28px !important; /* Elegant spacing */
-  height: 58px !important; /* Beautiful middle-ground height */
+  height: 48px !important; /* Reduced height from 58px */
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -514,7 +514,7 @@ section[id] {
 
 /* Overrides for children inside the public navbar */
 .public-navbar .navbar-logo {
-  font-size: 1.38rem !important; /* Elegant logo font size on public pages */
+  font-size: 1.22rem !important; /* Styled to match thinner navbar */
 }
 .public-navbar .navbar-logo:hover {
   transform: none !important;
@@ -571,12 +571,12 @@ section[id] {
   background-size: 260% 260% !important;
   color: var(--primary) !important;
   border-radius: 9999px !important;
-  padding: 0 26px !important; /* Slightly wider desktop CTA */
+  padding: 0 20px !important; /* Adjusted spacing */
   font-weight: 700 !important;
-  font-size: 0.99rem !important; /* Larger CTA text without widening */
+  font-size: 0.88rem !important; /* Adjusted font size */
   box-shadow: 0 4px 14px rgba(197, 160, 89, 0.22) !important;
   border: 1px solid rgba(255, 247, 222, 0.55) !important;
-  height: 44px !important; /* Slightly lower desktop CTA */
+  height: 34px !important; /* Reduced height from 44px */
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -598,18 +598,18 @@ section[id] {
 }
 
 .public-navbar .btn-dashboard-nav {
-  padding: 0 20px !important;
-  font-size: 0.92rem !important;
-  height: 40px !important;
+  padding: 0 16px !important;
+  font-size: 0.85rem !important;
+  height: 32px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
 .public-navbar .btn-logout-nav {
-  padding: 0 18px !important;
-  font-size: 0.92rem !important;
-  height: 40px !important;
+  padding: 0 14px !important;
+  font-size: 0.85rem !important;
+  height: 32px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -705,7 +705,7 @@ body:has(.public-navbar):has(.booking-page) .main-content {
 
 /* Homepage Hero padding adjustment */
 .home-container .hero-section {
-  padding: 130px 0 80px 0 !important;
+  padding: 95px 0 60px 0 !important;
 }
 
 body:has(.public-navbar) .sok-page .sok-hero {
@@ -1385,7 +1385,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  min-height: calc(100vh - 5px) !important;
+  min-height: 100vh !important;
   display: flex;
   align-items: center;
   width: 100%;
@@ -1591,7 +1591,7 @@ body:has(.public-navbar) .sok-page .sok-hero {
   position: relative;
   width: min(500px, 100%);
   max-width: min(500px, 100%);
-  margin-top: 110px;
+  margin-top: 20px;
   margin-left: max(-64px, min(0px, calc(600px - 50vw)));
   align-self: flex-start;
   z-index: 5;

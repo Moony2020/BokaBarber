@@ -167,7 +167,7 @@ export default function Navbar() {
     <header ref={navbarRef} className={`navbar-container ${isDashboard ? 'dashboard-navbar' : 'public-navbar'}${menuOpen ? ' menu-open' : ''}`}>
       <div className="container navbar-inner">
         <Link href="/" className="navbar-logo" aria-label="BokaBarber startsida">
-          <Image unoptimized priority src="/brand-logo.png" alt="BokaBarber logo" width={45} height={45} className="barber-logo-icon navbar-logo-icon" style={{ width: '45px', height: 'auto', objectFit: 'contain' }} />
+          <Image unoptimized priority loading="eager" src="/brand-logo.png" alt="BokaBarber logo" width={45} height={45} className="barber-logo-icon navbar-logo-icon" style={{ width: '45px', height: 'auto', objectFit: 'contain' }} />
           <span className="brand-wordmark"><span className="brand-main">Boka</span><span className="brand-accent">Barber</span></span>
         </Link>
 

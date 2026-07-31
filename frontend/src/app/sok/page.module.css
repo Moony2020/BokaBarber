@@ -147,7 +147,9 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(197, 160, 89, 0.3);
 }
-.searchBtnLabel { /* visible on desktop, hidden on xs via media query */ }
+.searchBtnLabel {
+  display: inline;
+}
 
 /* ── DROPDOWNS ── */
 .dropdown {
