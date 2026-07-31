@@ -13,7 +13,7 @@ html:has(.bb-wrap) {
 /* ── Base ── */
 .bb-wrap {
   position: fixed;
-  top: 85px;
+  top: 68px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -28,9 +28,9 @@ html:has(.bb-wrap) {
 .bb-sidebar {
   position: fixed;
   left: 0;
-  top: 85px;
+  top: 68px;
   width: 280px;
-  height: calc(100vh - 85px);
+  height: calc(100vh - 68px);
   background: #ffffff;
   border-right: 1px solid #d1c5b4;
   box-shadow: 0 10px 30px rgba(197, 160, 89, 0.08);
@@ -206,7 +206,7 @@ html:has(.bb-wrap) {
 
 .bb-main {
   flex: 1;
-  padding: 24px 32px 32px;
+  padding: 14px 32px 32px;
   max-width: 1600px;
   width: 100%;
   box-sizing: border-box;

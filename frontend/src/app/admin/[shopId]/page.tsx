@@ -560,15 +560,10 @@ export default function ShopAdminDashboard() {
                   )}
                 </div>
 
-                {activeTab==='oversikt' && (
-                  <div className="bb-date-chip">
-                    <span className="bb-mat-icon" style={{color:'#775a19',fontSize:20}}>event</span>
-                    <span>{today}</span>
-                  </div>
-                )}
-                {activeTab==='tjanster' && (
-                  <span className="bb-live-badge" style={{alignSelf:'flex-end'}}>Live Nu</span>
-                )}
+                <div className="bb-date-chip">
+                  <span className="bb-mat-icon" style={{color:'#775a19',fontSize:20}}>event</span>
+                  <span>{today}</span>
+                </div>
               </div>
             </div>
 
