@@ -345,7 +345,7 @@ export default function HomePage() {
             <div className="pricing-card">
               <span className="plan-tag">BAS</span>
               <div className="plan-price">
-                150 kr
+                100 kr
                 <span>/mån</span>
               </div>
 
@@ -378,7 +378,7 @@ export default function HomePage() {
               <div className="plan-badge">REKOMMENDERAD</div>
               <span className="plan-tag text-purple">PROFESSIONAL</span>
               <div className="plan-price">
-                250 kr
+                150 kr
                 <span>/mån</span>
               </div>
 
