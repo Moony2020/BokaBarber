@@ -243,6 +243,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
   overflow-x: hidden;
+  min-width: 360px;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -3941,6 +3942,21 @@ body:has(.public-navbar) .sok-page .sok-hero {
 
   .home-container .stat-label {
     font-size: 0.78rem;
+  }
+
+  /* Compact FAQ questions & answers on narrow mobile viewports */
+  .home-container .faq-item {
+    padding: 14px 12px !important;
+  }
+
+  .home-container .faq-question h3 {
+    font-size: 0.92rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .home-container .faq-answer p {
+    font-size: 0.82rem !important;
+    line-height: 1.5 !important;
   }
 }
 
