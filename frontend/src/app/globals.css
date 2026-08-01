@@ -4374,11 +4374,11 @@ body:has(.public-navbar) .sok-page .sok-hero {
 }
 
 .scroll-to-top-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--accent-dark);
-  border-color: var(--accent);
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 8px 24px rgba(181, 159, 103, 0.35);
+  background: linear-gradient(135deg, #fff3d6 0%, #f1d28d 100%) !important;
+  color: var(--primary) !important;
+  border-color: rgba(181, 159, 103, 0.8) !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 20px rgba(181, 159, 103, 0.4) !important;
 }
 
 .scroll-arrow-icon {
