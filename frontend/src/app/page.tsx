@@ -25,9 +25,9 @@ export default function HomePage() {
   };
 
   const slides = [
-    '/slide1.webp',
     '/slide2.webp',
-    '/slide3.webp'
+    '/slide3.webp',
+    '/slide1.webp'
   ];
   const [currentSlide, setCurrentSlide] = useState(0);
 
